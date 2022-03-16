@@ -1,0 +1,111 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.34.4.
+--
+-- see: https://github.com/sol/hpack
+
+name:           herp-logger
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/herp-inc/herp-hslib#readme>
+build-type:     Simple
+
+library
+  exposed-modules:
+      Herp.HttpLogger
+      Herp.Logger
+      Herp.Logger.LogLevel
+      Herp.Logger.SentryTransport
+      Herp.Logger.StdoutTransport
+      Herp.Logger.Transport
+  other-modules:
+      Protos.Herp.Log.HttpLog
+  hs-source-dirs:
+      src
+      gen-proto
+  default-extensions:
+      ConstraintKinds
+      DeriveDataTypeable
+      DeriveFoldable
+      DeriveFunctor
+      DeriveGeneric
+      DeriveTraversable
+      DuplicateRecordFields
+      ExplicitForAll
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NamedWildCards
+      NegativeLiterals
+      NumericUnderscores
+      OverloadedStrings
+      PackageImports
+      PartialTypeSignatures
+      PatternSynonyms
+      PolyKinds
+      QuasiQuotes
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      Strict
+      StrictData
+      TemplateHaskell
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      DeriveAnyClass
+      DataKinds
+      GADTs
+      BangPatterns
+      OverloadedLabels
+      GeneralizedNewtypeDeriving
+      DerivingStrategies
+      BlockArguments
+      ImplicitParams
+      InstanceSigs
+      ImportQualifiedPost
+  build-depends:
+      aeson
+    , async
+    , base >=4.7 && <5
+    , base64-bytestring
+    , binary
+    , bytestring
+    , case-insensitive
+    , containers
+    , deepseq
+    , exceptions
+    , fast-logger
+    , generic-lens
+    , generic-lens-core
+    , gitrev
+    , hashable
+    , herp-util
+    , http-conduit
+    , lens
+    , lrucaching
+    , mono-traversable
+    , mtl
+    , optparse-generic
+    , proto3-suite
+    , proto3-wire
+    , raven-haskell ==0.1.4.*
+    , rio
+    , safe
+    , safe-exceptions
+    , stm
+    , text
+    , time
+    , transformers
+    , unix-compat
+    , unix-time
+    , unordered-containers
+    , uuid
+    , vector
+    , wai
+  default-language: Haskell2010
