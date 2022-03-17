@@ -62,11 +62,6 @@ library:
   - stm
   - async
 
-  # Lens
-  - generic-lens
-  - generic-lens-core
-  - lens
-
   # Sentry
   - raven-haskell == 0.1.4.*
   - fast-logger

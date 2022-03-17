@@ -1,6 +1,6 @@
 {-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE PackageImports #-}
-{-# LANGUAGE OverloadedLabels #-}
+
 module Herp.Logger
     ( (.=)
     , Logger
@@ -110,8 +110,8 @@ new concLevel loggerThresholdLevel transports = do
             killThread tid
             killAllThreads thPool
 
-    let minTransportThreshold = List.minimum (fmap (^. #threshold) transports)
-    let loggerFlush = forM_ transports (\tr -> liftIO $ tr ^. #flush)
+    let minTransportThreshold = List.minimum $ fmap threshold transports
+    let loggerFlush = forM_ transports $ liftIO . X.flush
 
     let logger =
             Logger
@@ -124,10 +124,7 @@ new concLevel loggerThresholdLevel transports = do
                 , loggerFlush
                 }
 
-    let transportToValue tr = A.object
-            [ "name" .= (tr ^. #name . string)
-            , "transport_level" .= (tr ^. #threshold)
-            ]
+    let transportToValue tr = A.object ["name" .= name tr, "transport_level" .= threshold tr]
     logIO logger Informational "logger.new" $ HashMap.fromList
             [ ("log_level", A.toJSON loggerThresholdLevel)
             , ("transports", A.toJSON $ fmap transportToValue transports)
@@ -192,9 +189,7 @@ logM msgLevel ~msg ~obj = do
     logIO logger msgLevel msg obj
 
 flush :: forall r m. (MonadReader r m, HasLogger r, MonadIO m) => m ()
-flush = do
-    logger <- asks toLogger
-    liftIO $ logger ^. #loggerFlush
+flush = asks toLogger >>= liftIO . loggerFlush
 
 -- logging function for service log
 recordLog :: (MonadIO m, JSONPB.ToJSONPB serviceLog) => Logger -> Text -> serviceLog -> m ()
