@@ -10,7 +10,6 @@ import "aeson" Data.Aeson ( Object, Value )
 import "bytestring" Data.ByteString.Short (ShortByteString)
 import Herp.Logger.LogLevel ( LogLevel )
 import GHC.Generics (Generic)
-import Data.Generics.Labels () -- Import instances
 
 data TransportInput = TransportInput
     { message :: Text

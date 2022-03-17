@@ -81,13 +81,10 @@ library
     , deepseq
     , exceptions
     , fast-logger
-    , generic-lens
-    , generic-lens-core
     , gitrev
     , hashable
     , herp-util
     , http-conduit
-    , lens
     , lrucaching
     , mono-traversable
     , mtl
