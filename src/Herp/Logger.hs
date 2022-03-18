@@ -1,9 +1,10 @@
 {-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE PackageImports #-}
+{-# LANGUAGE CPP #-}
 
 module Herp.Logger
     ( (.=)
-    , Logger
+    , Logger(..)
     , HasLogger(..)
     , LogLevel(..)
     , new
@@ -15,7 +16,12 @@ module Herp.Logger
 
 import "base" Prelude hiding (log)
 import "base" Data.List qualified as List
+
+#if MIN_VERSION_aeson(2,0,0)
+import Data.Aeson.KeyMap as HashMap
+#else
 import "unordered-containers" Data.HashMap.Strict qualified as HashMap
+#endif
 import "base" Control.Concurrent ( forkIO, killThread)
 import "base" Control.Concurrent.Chan (Chan, dupChan, newChan, readChan, writeChan)
 import "base" Control.Monad (forever, forM, forM_, when)

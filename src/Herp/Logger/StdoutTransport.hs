@@ -1,13 +1,23 @@
+{-# LANGUAGE CPP #-}
 module Herp.Logger.StdoutTransport where
 
-import Data.HashMap.Strict as HashMap
-import "aeson" Data.Aeson ((.=))
-import "aeson" Data.Aeson qualified as A
-import "aeson" Data.Aeson.Encoding qualified as A
 import "fast-logger" System.Log.FastLogger (LoggerSet, ToLogStr(toLogStr), pushLogStrLn, flushLogStr)
 import Herp.Logger.Transport
 import Herp.Logger.LogLevel
 import Herp.Util.Lens hiding ((.=))
+
+import "aeson" Data.Aeson ((.=))
+import "aeson" Data.Aeson qualified as A
+import "aeson" Data.Aeson.Encoding qualified as A
+
+#if MIN_VERSION_aeson(2,0,0)
+import Data.Aeson.KeyMap as HashMap
+import "aeson" Data.Aeson.Key (fromText)
+#else
+import Data.HashMap.Strict as HashMap
+fromText :: Text -> Text
+fromText = id
+#endif
 
 stdoutTransport :: LoggerSet -> LogLevel -> Transport
 stdoutTransport loggerSet transportThreshold =
@@ -19,7 +29,7 @@ stdoutTransport loggerSet transportThreshold =
                     <> "message" .= message
                     )
             let value = A.pairs $ case extra of
-                    Just (key, val) -> series <> key .= val
+                    Just (key, val) -> series <> fromText key .= val
                     Nothing -> series
             let json = A.encodingToLazyByteString value
             pushLogStrLn loggerSet $ toLogStr json
