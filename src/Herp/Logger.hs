@@ -25,7 +25,8 @@ import "mtl" Control.Monad.Reader (ReaderT, ask, asks, MonadReader)
 import "aeson" Data.Aeson                     ((.=), Object, Value(..))
 import "aeson" Data.Aeson qualified as A
 import "aeson" Data.Aeson.Encoding qualified as A
-import "aeson" Data.Aeson.Types               (Pair)
+import "aeson" Data.Aeson.Types (Pair)
+import "aeson" Data.Aeson.KeyMap qualified as A
 import "bytestring" Data.ByteString.Lazy.Char8 qualified as BC
 import "fast-logger" System.Log.FastLogger.Date (newTimeCache)
 import "fast-logger" System.Log.FastLogger.Types (FormattedTime, TimeFormat)
@@ -125,7 +126,7 @@ new concLevel loggerThresholdLevel transports = do
                 }
 
     let transportToValue tr = A.object ["name" .= name tr, "transport_level" .= threshold tr]
-    logIO logger Informational "logger.new" $ HashMap.fromList
+    logIO logger Informational "logger.new" $ A.fromList
             [ ("log_level", A.toJSON loggerThresholdLevel)
             , ("transports", A.toJSON $ fmap transportToValue transports)
             ]
@@ -164,7 +165,7 @@ log' logger msgLevel date message ~obj = do
             { level = msgLevel
             , date = date ^. shortBS
             , message
-            , extra = if HashMap.null obj then Nothing else Just (extraKey, Object obj)
+            , extra = if A.null obj then Nothing else Just (extraKey, Object obj)
             }
 
 class HasLogger a where

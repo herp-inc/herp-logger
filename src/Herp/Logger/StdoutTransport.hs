@@ -4,6 +4,7 @@ import Data.HashMap.Strict as HashMap
 import "aeson" Data.Aeson ((.=))
 import "aeson" Data.Aeson qualified as A
 import "aeson" Data.Aeson.Encoding qualified as A
+import "aeson" Data.Aeson.Key (fromText)
 import "fast-logger" System.Log.FastLogger (LoggerSet, ToLogStr(toLogStr), pushLogStrLn, flushLogStr)
 import Herp.Logger.Transport
 import Herp.Logger.LogLevel
@@ -19,7 +20,7 @@ stdoutTransport loggerSet transportThreshold =
                     <> "message" .= message
                     )
             let value = A.pairs $ case extra of
-                    Just (key, val) -> series <> key .= val
+                    Just (key, val) -> series <> fromText key .= val
                     Nothing -> series
             let json = A.encodingToLazyByteString value
             pushLogStrLn loggerSet $ toLogStr json
