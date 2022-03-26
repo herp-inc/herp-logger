@@ -37,7 +37,7 @@ library:
   - safe
   - hashable
   - uuid
-  - aeson
+  - aeson >= 2.0
   - base64-bytestring
   - time
   - mono-traversable
