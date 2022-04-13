@@ -1,0 +1,32 @@
+packages:
+    .
+    deps/herp-hslib/herp-util
+    deps/herp-hslib/herp-misc
+
+source-repository-package
+    type: git
+    location: https://github.com/herp-inc/raven-haskell.git
+    tag: e9d89ecb3499c29f56a67da00bddbed53e37aeca
+    subdir: raven-haskell
+
+source-repository-package
+    type: git
+    location: https://github.com/fumieval/proto3-wire
+    tag: 11a7a72cfc365d33add539a088e1b46d9979145a
+
+--source-repository-package
+--    type: git
+--    location: https://github.com/fumieval/word-compat.git
+--    tag: f3fb980099282c0115dd37e7e81fe4b51dff124e
+
+source-repository-package
+    type: git
+    location: https://github.com/ruicc/proto3-suite
+    tag: 15de9abfd0ca9c071f2c6300b549cf1e1acd84ef
+
+--source-repository-package
+--    type: git
+--    location: https://github.com/fumieval/word24
+--    tag: f54420a28c65500170ab199e61151a3011e45ded
+
+allow-newer: *

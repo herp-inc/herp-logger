@@ -1,0 +1,3 @@
+[submodule "deps/herp-hslib"]
+	path = deps/herp-hslib
+	url = https://github.com/herp-inc/herp-hslib.git
