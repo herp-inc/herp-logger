@@ -12,6 +12,8 @@ module Herp.Logger
     , logIO
     , recordLog
     , urgentLog
+    -- * monad-logger
+    , runLoggingT
     ) where
 
 import "base" Prelude hiding (log)
@@ -26,6 +28,7 @@ import "base" Control.Concurrent ( forkIO, killThread)
 import "base" Control.Concurrent.Chan (Chan, dupChan, newChan, readChan, writeChan)
 import "base" Control.Monad (forever, forM, forM_, when)
 import "base" Control.Monad.IO.Class (MonadIO(liftIO))
+import Control.Monad.Logger qualified as ML
 import "base" System.IO (hSetBuffering, BufferMode(..), stdout)
 import "mtl" Control.Monad.Reader (ReaderT, ask, asks, MonadReader)
 import "aeson" Data.Aeson                     ((.=), Object, Value(..))
@@ -46,6 +49,7 @@ import Herp.Util.Lens hiding ((.=))
 import Herp.Util.ThreadPool
 
 import "text" Data.Text as Text
+import "text" Data.Text.Encoding as Text
 import "base" GHC.Generics
 import "safe-exceptions" Control.Exception.Safe qualified as E
 
@@ -221,3 +225,26 @@ recordLog logger message serviceLog = do
 
 serviceLogKey :: Text
 serviceLogKey = "service"
+
+runLoggingT :: Logger -> ML.LoggingT IO () -> IO ()
+runLoggingT logger (ML.LoggingT run) = run $ \loc logSrc lv logStr -> do
+  let msg = Text.decodeUtf8 $ ML.fromLogStr $ ML.defaultLogStr loc logSrc lv logStr
+  lv <- cnvlv lv
+  logIO logger lv msg mempty where
+    cnvlv ML.LevelDebug = return Debug
+    cnvlv ML.LevelInfo = return Informational
+    cnvlv ML.LevelWarn = return Warning
+    cnvlv ML.LevelError = return Error
+    cnvlv (ML.LevelOther text)
+      | text ~= "Notice" = return Notice
+      | text ~= "Critical" = return Critical
+      | text ~= "Alert" = return Alert
+      | text ~= "Emergency" = return Emergency
+      | otherwise = do
+        let msg = "A data constructor `LevelOther Text` of type of Control.Monad.Logger.LogLevel "
+                    <> "was captured while `loggerWrapper` is subscribing logs LaunchDarkly Haskell SDK "
+                    <> "outputs. The argument of the constructor says: "
+                    <> text
+        logIO logger Notice msg mempty
+        return Warning
+    (~=) s t = Text.toCaseFold s == Text.toCaseFold t
