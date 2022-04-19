@@ -86,6 +86,7 @@ library
     , herp-util
     , http-conduit
     , lrucaching
+    , monad-logger
     , mono-traversable
     , mtl
     , optparse-generic
