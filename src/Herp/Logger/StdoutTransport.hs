@@ -15,6 +15,7 @@ import Data.Aeson.KeyMap as HashMap
 import "aeson" Data.Aeson.Key (fromText)
 #else
 import Data.HashMap.Strict as HashMap
+import Data.Text
 fromText :: Text -> Text
 fromText = id
 #endif

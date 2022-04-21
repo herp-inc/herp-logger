@@ -46,6 +46,7 @@ library:
   - case-insensitive
   - unix-compat
   - unix-time
+  - monad-logger
 
   # Control
   - deepseq
