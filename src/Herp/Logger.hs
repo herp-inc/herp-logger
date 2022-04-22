@@ -36,8 +36,10 @@ import "aeson" Data.Aeson qualified as A
 import "aeson" Data.Aeson.Encoding qualified as A
 import "aeson" Data.Aeson.Types               (Pair)
 import "bytestring" Data.ByteString.Lazy.Char8 qualified as BC
+import "bytestring" Data.ByteString.Short qualified as BS
 import "fast-logger" System.Log.FastLogger.Date (newTimeCache)
 import "fast-logger" System.Log.FastLogger.Types (FormattedTime, TimeFormat)
+import "text" Data.Text.Encoding qualified as T
 import Data.UnixTime (formatUnixTime, fromEpochTime)
 import System.PosixCompat.Time (epochTime)
 import "proto3-suite" Proto3.Suite.JSONPB qualified as JSONPB
@@ -45,7 +47,6 @@ import RIO (RIO(..))
 
 import Herp.Logger.LogLevel          as X
 import Herp.Logger.Transport         as X
-import Herp.Util.Lens hiding ((.=))
 import Herp.Util.ThreadPool
 
 import "text" Data.Text as Text
@@ -80,7 +81,7 @@ urgentLog msgLevel msg mextra = do
     date <- formatUnixTime timestampFormat $ fromEpochTime now
     let series =
                "level" .= msgLevel
-            <> "date" .= (date ^. utf8)
+            <> "date" .= T.decodeUtf8 date
             <> "message" .= msg
     let series' = A.pairs $ case mextra of
                 Just extra ->  series <> A.pair "extra" extra
@@ -172,7 +173,7 @@ log' logger msgLevel date message ~obj = do
     when (checkToLog logger msgLevel) $ do
         push TransportInput
             { level = msgLevel
-            , date = date ^. shortBS
+            , date = BS.toShort date
             , message
             , extra = if HashMap.null obj then Nothing else Just (extraKey, Object obj)
             }
@@ -218,7 +219,7 @@ recordLog logger message serviceLog = do
         date <- liftIO timeCache
         liftIO $ push TransportInput {
               level = msgLevel
-            , date = date ^. shortBS
+            , date = BS.toShort date
             , message
             , extra = Just (serviceLogKey, value)
             }
