@@ -24,10 +24,10 @@ import Data.Aeson.KeyMap as HashMap
 #else
 import "unordered-containers" Data.HashMap.Strict qualified as HashMap
 #endif
-import "base" Control.Concurrent ( forkIO, killThread)
-import "base" Control.Concurrent.Chan (Chan, dupChan, newChan, readChan, writeChan)
+import "base" Control.Concurrent ( forkIO, killThread, forkFinally )
 import "base" Control.Monad (forever, forM, forM_, when)
 import "base" Control.Monad.IO.Class (MonadIO(liftIO))
+import "stm" Control.Concurrent.STM
 import Control.Monad.Logger qualified as ML
 import "base" System.IO (hSetBuffering, BufferMode(..), stdout)
 import "mtl" Control.Monad.Reader (ReaderT, ask, asks, MonadReader)
@@ -60,7 +60,6 @@ import "safe-exceptions" Control.Exception.Safe qualified as E
 
 data Logger = Logger
     { loggerThresholdLevel :: LogLevel
-    , minTransportThreshold :: LogLevel
     , transports :: [Transport]
     , timeCache :: IO FormattedTime
     , push :: TransportInput -> IO ()
@@ -93,44 +92,44 @@ new concLevel loggerThresholdLevel transports = do
     timeCache <- newTimeCache timestampFormat
 
     -- Initializing transports
-
-    (dupChans, push) <- duplicatedChans (Prelude.length transports)
-
-    tids <- forM (Prelude.zip dupChans transports) $ \(chan', Transport {name, runTransport, threshold = transportThreshold}) -> do
+    tids <- forM transports \Transport {name, runTransport, threshold = transportThreshold} -> do
+        queue <- newTQueueIO
         thPool <-
             mkThreadPool
                 concLevel
-                runTransport
                 (\e -> urgentLog Error "Exception occurred in runTransport" $
                         Just $ A.pairs (
                            "exception" .= E.displayException e
                         <> "transport" .= name
                         ))
 
+        -- まだ書き込まれていないログを本スレッドで処理する
+        let drain _ = atomically (flushTQueue queue) >>= mapM_ runTransport
+
         -- FIXME: Multi transports writing to the same file occurs duplicated characters like "mmeessssaaggee"
-        tid <- forkIO . forever $ do
+        tid <- flip forkFinally drain . forever $ do
             -- Start listening for the channel
-            input <- readChan chan'
-            let TransportInput {level = messageLevel} = input
-            when (loggerThresholdLevel <= messageLevel && transportThreshold <= messageLevel) $
-                runTask thPool input -- NOTE: It blocks when reached ConcurrencyLevel
-        pure (tid, thPool)
+            input <- atomically $ readTQueue queue
+            runTask thPool $ runTransport input -- NOTE: It blocks when reached ConcurrencyLevel
+
+        let write input = do
+                let TransportInput {level = messageLevel} = input
+                when (transportThreshold <= messageLevel) $ writeTQueue queue input
+        pure (tid, thPool, write)
 
     -- NOTE: Ensure logger stops before cleanup
-    let loggerCleanup = forM_ tids $ \(tid, thPool) -> do
+    let loggerCleanup = forM_ tids $ \(tid, thPool, _) -> do
             killThread tid
             killAllThreads thPool
 
-    let minTransportThreshold = List.minimum $ fmap threshold transports
     let loggerFlush = forM_ transports $ liftIO . X.flush
 
     let logger =
             Logger
                 { loggerThresholdLevel
-                , minTransportThreshold
                 , transports
                 , timeCache
-                , push
+                , push = \input -> forM_ tids $ \(_, _, write) -> atomically $ write input
                 , loggerCleanup
                 , loggerFlush
                 }
@@ -142,22 +141,10 @@ new concLevel loggerThresholdLevel transports = do
             ]
     pure logger
 
--- n = 0 のときはチャンネルも無いはずなのでチャンネルに書く処理は何もしない
--- 複製後のチャンネルの数を n にしたいので複製の回数は n - 1 回
-duplicatedChans :: Int -> IO ([Chan a], a -> IO ())
-duplicatedChans 0  = pure ([], const $ pure ())
-duplicatedChans n' = do
-    chan <- newChan
-
-    let dups 1 = pure [chan]
-        dups n = (:) <$> dupChan chan <*> dups (n - 1)
-
-    (,) <$> dups n' <*> pure (writeChan chan)
-
 checkToLog :: Logger -> LogLevel -> Bool
 checkToLog logger msgLevel =
-    let Logger { loggerThresholdLevel, minTransportThreshold } = logger
-    in loggerThresholdLevel <= msgLevel && minTransportThreshold <= msgLevel
+    let Logger { loggerThresholdLevel } = logger
+    in loggerThresholdLevel <= msgLevel
 
 -- |
 --
