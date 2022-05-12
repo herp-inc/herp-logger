@@ -108,16 +108,14 @@ new concLevel loggerThresholdLevel transports = do
 
         -- FIXME: Multi transports writing to the same file occurs duplicated characters like "mmeessssaaggee"
         tid <- flip forkFinally drain . forever $ do
-            -- Start listening for the channel
             input <- atomically $ readTQueue queue
-            runTask thPool $ runTransport input -- NOTE: It blocks when reached ConcurrencyLevel
+            runTask thPool $ runTransport input -- 同時実行数がConcurrencyLevelに達するとブロックする
 
         let write input = do
                 let TransportInput {level = messageLevel} = input
                 when (transportThreshold <= messageLevel) $ writeTQueue queue input
         pure (tid, thPool, write)
 
-    -- NOTE: Ensure logger stops before cleanup
     let loggerCleanup = forM_ tids $ \(tid, thPool, _) -> do
             killThread tid
             killAllThreads thPool
@@ -156,7 +154,6 @@ log' :: Logger -> LogLevel -> FormattedTime -> Text -> Object -> IO ()
 log' logger msgLevel date message ~obj = do
     let Logger { push } = logger
     let extraKey = "extra"
-    -- NOTE: Check LogLevel before writing to chan in case chan gets stuck.
     when (checkToLog logger msgLevel) $ do
         push TransportInput
             { level = msgLevel
@@ -192,14 +189,13 @@ flush = asks toLogger >>= liftIO . loggerFlush
 -- logging function for service log
 recordLog :: (MonadIO m, JSONPB.ToJSONPB serviceLog) => Logger -> Text -> serviceLog -> m ()
 recordLog logger message serviceLog = do
-    let msgLevel = #notice -- NOTE: datadog seems to require loglevel (to classify logs?)
+    let msgLevel = #notice -- datadogはloglevelを要求する
     let Logger {push, timeCache} = logger
     when (checkToLog logger msgLevel) $ do
         let options =
                 JSONPB.jsonPBOptions
-                    { -- NOTE: To store to bigquery emitting default value is preferred
-                      JSONPB.optEmitDefaultValuedFields = True
-                    , -- NOTE: To store to bigquery "oneof" enclosure is unnecessary
+                    { -- NOTE: BigQueryで扱いやすくするため、デフォルト値を省略せず、oneofは使わない
+                      JSONPB.optEmitDefaultValuedFields = True,
                       JSONPB.optEmitNamedOneof = False
                     }
         let value = JSONPB.toJSONPB serviceLog options

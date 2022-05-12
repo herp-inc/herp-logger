@@ -13,15 +13,15 @@ import GHC.Generics (Generic)
 
 data TransportInput = TransportInput
     { message :: Text
-    , date :: ShortByteString -- See LoggingContext
+    , date :: ShortByteString
     , level :: LogLevel
     , extra :: Maybe (Text, Value)
     }
     deriving stock Generic
 
 data Transport = Transport
-    { name         :: Text -- free word, for human
-    , runTransport :: TransportInput -> IO () -- This task must be threadsafe
+    { name         :: Text -- 種類を識別するための名前
+    , runTransport :: TransportInput -> IO () -- スレッドセーフでなければならない
     , threshold    :: LogLevel
     , flush :: IO ()
     }
