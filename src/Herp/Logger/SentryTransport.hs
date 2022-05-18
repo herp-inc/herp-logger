@@ -5,7 +5,7 @@ module Herp.Logger.SentryTransport
     ( sentry
     ) where
 
-import "text" Data.Text (Text)
+import "text" Data.Text (Text, unpack)
 import "aeson" Data.Aeson (Object, Value)
 import "unordered-containers" Data.HashMap.Strict (HashMap)
 import "raven-haskell" System.Log.Raven (register)
@@ -17,7 +17,6 @@ import "raven-haskell" System.Log.Raven.Types
 import "unordered-containers" Data.HashMap.Strict qualified as HashMap
 import Herp.Logger.LogLevel qualified as Level (LogLevel(..))
 import Herp.Logger.Transport (Transport(..), TransportInput(..))
-import Herp.Util.Lens
 
 
 sentry :: SentryService -> Level.LogLevel -> Transport
@@ -29,7 +28,7 @@ sentry svc transportThreshold =
             register svc
                      "authz"
                      sentryLevel
-                     (message ^. string)
+                     (unpack message)
                      (\x@SentryRecord { srExtra } -> x { srExtra = srExtra <> mkSRExtra extra })
     in Transport
         { name = name
@@ -39,7 +38,7 @@ sentry svc transportThreshold =
         }
 
 mkSRExtra :: Maybe (Text, Value) -> HashMap String Value
-mkSRExtra (Just (key, val)) = HashMap.singleton (key ^. string) val
+mkSRExtra (Just (key, val)) = HashMap.singleton (unpack key) val
 mkSRExtra Nothing = mempty
 
 convertLevel :: Level.LogLevel -> SentryLevel

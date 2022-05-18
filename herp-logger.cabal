@@ -1,4 +1,4 @@
-cabal-version: 1.12
+cabal-version: 3.0
 
 -- This file has been generated from package.yaml by hpack version 0.34.5.
 --
@@ -83,7 +83,7 @@ library
     , fast-logger
     , gitrev
     , hashable
-    , herp-util
+    , herp-util ^>= 0.2
     , http-conduit
     , lrucaching
     , monad-logger
