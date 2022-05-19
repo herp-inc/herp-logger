@@ -191,7 +191,7 @@ flush = asks toLogger >>= liftIO . loggerFlush
 -- logging function for service log
 recordLog :: (MonadIO m, JSONPB.ToJSONPB serviceLog) => Logger -> Text -> serviceLog -> m ()
 recordLog logger message serviceLog = do
-    let msgLevel = #notice -- datadogはloglevelを要求する
+    let msgLevel = Informational -- datadogはloglevelを要求する
     let Logger {push, timeCache} = logger
     when (checkToLog logger msgLevel) $ do
         let options =
