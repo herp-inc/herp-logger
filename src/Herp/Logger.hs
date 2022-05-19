@@ -107,9 +107,11 @@ new concLevel loggerThresholdLevel transports = do
         let drain _ = atomically (flushTQueue queue) >>= mapM_ runTransport
 
         -- FIXME: Multi transports writing to the same file occurs duplicated characters like "mmeessssaaggee"
-        tid <- flip forkFinally drain . forever $ do
-            input <- atomically $ readTQueue queue
-            runTask thPool $ runTransport input -- 同時実行数がConcurrencyLevelに達するとブロックする
+        tid <- flip forkFinally drain . forever
+            $ E.bracketOnError
+                (atomically $ readTQueue queue)
+                (atomically . unGetTQueue queue) -- 異常終了したらdrainに流す
+                (runTask thPool . runTransport) -- 同時実行数がConcurrencyLevelに達するとブロックする
 
         let write input = do
                 let TransportInput {level = messageLevel} = input
