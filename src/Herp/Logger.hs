@@ -12,12 +12,17 @@ module Herp.Logger
     , logIO
     , recordLog
     , urgentLog
+    -- * Payload
+    , Payload
+    , P.level
+    , P.message
     -- * monad-logger
     , runLoggingT
     ) where
 
 import "base" Prelude hiding (log)
 import "base" Data.List qualified as List
+import "base" Data.Semigroup (Max(..))
 
 #if MIN_VERSION_aeson(2,0,0)
 import Data.Aeson.KeyMap as HashMap
@@ -45,6 +50,7 @@ import System.PosixCompat.Time (epochTime)
 import "proto3-suite" Proto3.Suite.JSONPB qualified as JSONPB
 import RIO (RIO(..))
 
+import Herp.Logger.Payload           as P
 import Herp.Logger.LogLevel          as X
 import Herp.Logger.Transport         as X
 import Herp.Util.ThreadPool
@@ -135,9 +141,11 @@ new concLevel loggerThresholdLevel transports = do
                 }
 
     let transportToValue tr = A.object ["name" .= name tr, "transport_level" .= threshold tr]
-    logIO logger Informational "logger.new" $ HashMap.fromList
-            [ ("log_level", A.toJSON loggerThresholdLevel)
-            , ("transports", A.toJSON $ fmap transportToValue transports)
+    logIO logger $ mconcat
+            [ #info
+            , "logger.new"
+            , "log_level" .= loggerThresholdLevel
+            , "transports" .= fmap transportToValue transports
             ]
     pure logger
 
@@ -152,16 +160,17 @@ checkToLog logger msgLevel =
 -- >>> date = "2019-08-06T10:01:05Z"
 -- >>> log' logger Warning date "Hello" mempty
 -- {"date":"2019-08-06T10:01:05Z","message":"Hello","level":"warn"}
-log' :: Logger -> LogLevel -> FormattedTime -> Text -> Object -> IO ()
-log' logger msgLevel date message ~obj = do
+log' :: Logger -> FormattedTime -> Payload -> IO ()
+log' logger date obj = do
     let Logger { push } = logger
     let extraKey = "extra"
-    when (checkToLog logger msgLevel) $ do
+    let level = getMax $ payloadLevel obj
+    when (checkToLog logger level) $ do
         push TransportInput
-            { level = msgLevel
+            { level = level
             , date = BS.toShort date
-            , message
-            , extra = if HashMap.null obj then Nothing else Just (extraKey, Object obj)
+            , message = payloadMessage obj
+            , extra = if HashMap.null $ payloadObject obj then Nothing else Just (extraKey, Object $ payloadObject obj)
             }
 
 class HasLogger a where
@@ -170,20 +179,16 @@ class HasLogger a where
 instance HasLogger Logger where
     toLogger = id
 
-logIO :: MonadIO m => Logger -> LogLevel -> Text
-    -> Object -- ^ extra data
-    -> m ()
-logIO logger@Logger {timeCache} msgLevel ~msg ~obj = do
+logIO :: MonadIO m => Logger -> Payload -> m ()
+logIO logger@Logger {timeCache} ~msg = do
     date <- liftIO timeCache
-    liftIO $ log' logger msgLevel date msg obj
-{-# SPECIALIZE logIO :: Logger -> LogLevel -> Text -> Object -> IO () #-}
+    liftIO $ log' logger date msg
+{-# SPECIALIZE logIO :: Logger -> Payload -> IO () #-}
 
-logM :: forall r m. (MonadReader r m, HasLogger r, MonadIO m) => LogLevel -> Text
-    -> Object -- ^ extra data
-    -> m ()
-logM msgLevel ~msg ~obj = do
+logM :: forall r m. (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
+logM ~msg = do
     logger <- asks toLogger
-    logIO logger msgLevel msg obj
+    logIO logger msg
 
 flush :: forall r m. (MonadReader r m, HasLogger r, MonadIO m) => m ()
 flush = asks toLogger >>= liftIO . loggerFlush
@@ -216,7 +221,7 @@ runLoggingT :: Logger -> ML.LoggingT IO () -> IO ()
 runLoggingT logger (ML.LoggingT run) = run $ \loc logSrc lv logStr -> do
   let msg = Text.decodeUtf8 $ ML.fromLogStr $ ML.defaultLogStr loc logSrc lv logStr
   lv <- cnvlv lv
-  logIO logger lv msg mempty where
+  logIO logger $ P.level lv <> P.message msg where
     cnvlv ML.LevelDebug = return Debug
     cnvlv ML.LevelInfo = return Informational
     cnvlv ML.LevelWarn = return Warning
@@ -231,6 +236,6 @@ runLoggingT logger (ML.LoggingT run) = run $ \loc logSrc lv logStr -> do
                     <> "was captured while `loggerWrapper` is subscribing logs LaunchDarkly Haskell SDK "
                     <> "outputs. The argument of the constructor says: "
                     <> text
-        logIO logger Notice msg mempty
+        logIO logger $ P.level Notice <> P.message msg
         return Warning
     (~=) s t = Text.toCaseFold s == Text.toCaseFold t

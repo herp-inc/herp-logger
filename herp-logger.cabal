@@ -14,6 +14,7 @@ library
       Herp.HttpLogger
       Herp.Logger
       Herp.Logger.LogLevel
+      Herp.Logger.Payload
       Herp.Logger.SentryTransport
       Herp.Logger.StdoutTransport
       Herp.Logger.Transport
@@ -81,6 +82,7 @@ library
     , deepseq
     , exceptions
     , fast-logger
+    , generic-data
     , gitrev
     , hashable
     , herp-util ^>= 0.2
