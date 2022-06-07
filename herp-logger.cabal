@@ -85,7 +85,6 @@ library
     , generic-data
     , gitrev
     , hashable
-    , herp-util ^>= 0.2
     , http-conduit
     , lrucaching
     , monad-logger
@@ -95,6 +94,7 @@ library
     , proto3-suite
     , proto3-wire
     , raven-haskell ==0.1.4.*
+    , resource-pool ^>= 0.3
     , rio
     , safe
     , safe-exceptions
