@@ -30,6 +30,7 @@ import Data.Aeson.KeyMap as HashMap
 import "unordered-containers" Data.HashMap.Strict qualified as HashMap
 #endif
 import "base" Control.Concurrent ( forkIO, killThread, forkFinally )
+import "async" Control.Concurrent.Async (async, Async, cancel)
 import "base" Control.Monad (forever, forM, forM_, when)
 import "base" Control.Monad.IO.Class (MonadIO(liftIO))
 import "stm" Control.Concurrent.STM
@@ -44,6 +45,7 @@ import "bytestring" Data.ByteString.Lazy.Char8 qualified as BC
 import "bytestring" Data.ByteString.Short qualified as BS
 import "fast-logger" System.Log.FastLogger.Date (newTimeCache)
 import "fast-logger" System.Log.FastLogger.Types (FormattedTime, TimeFormat)
+import "resource-pool" Data.Pool
 import "text" Data.Text.Encoding qualified as T
 import Data.UnixTime (formatUnixTime, fromEpochTime)
 import System.PosixCompat.Time (epochTime)
@@ -53,12 +55,41 @@ import RIO (RIO(..))
 import Herp.Logger.Payload           as P
 import Herp.Logger.LogLevel          as X
 import Herp.Logger.Transport         as X
-import Herp.Util.ThreadPool
 
 import "text" Data.Text as Text
 import "text" Data.Text.Encoding as Text
 import "base" GHC.Generics
 import "safe-exceptions" Control.Exception.Safe qualified as E
+
+
+newtype ThreadPool = ThreadPool
+    { unThreadPool :: Pool (TChan (IO ()), Async ())
+    }
+
+type ConcurrencyLevel = Int
+
+mkThreadPool :: ConcurrencyLevel -> (E.SomeException -> IO ()) -> IO ThreadPool
+mkThreadPool poolMaxResources errHandler = do
+    let createResource = do
+            chan <- newTChanIO
+            thread <- async . forever $ do
+                task <- atomically $ readTChan chan -- NOTE: Blocks when chan is empty
+                E.catch task
+                        -- NOTE: Catch ALL synchronous exceptions
+                        -- to avoid thread is killed
+                        (\ (e :: E.SomeException) -> errHandler e)
+            pure (chan, thread)
+    let freeResource (_chan, thread) = cancel thread
+    let poolCacheTTL = 3600
+    pool <- newPool PoolConfig{..}
+    pure $ ThreadPool pool
+
+-- NOTE: It *blocks* when there are no threads in idle.
+runTask :: ThreadPool -> IO () -> IO ()
+runTask (ThreadPool thPool) param = withResource thPool $ \ (ch, _th) -> atomically (writeTChan ch param)
+
+killAllThreads :: ThreadPool -> IO ()
+killAllThreads (ThreadPool thPool) = destroyAllResources thPool
 
 -- $setup
 -- >>> import Data.Time (getCurrentTime)
