@@ -6,9 +6,10 @@
 
 module Herp.Logger.LogLevel
     ( LogLevel(..)
+    , parseLogLevel
     ) where
 
-import "aeson"   Data.Aeson                     ( Value(String), ToJSON(..) )
+import "aeson"   Data.Aeson                     ( Value(String), ToJSON(..), FromJSON(..) )
 import "base"    GHC.OverloadedLabels           ( IsLabel(fromLabel) )
 
 -- | https://tools.ietf.org/html/rfc5424#section-6.2.1
@@ -26,6 +27,21 @@ data LogLevel
     deriving stock Ord
     deriving stock Show
     deriving stock Bounded
+
+parseLogLevel :: String -> Either String LogLevel
+parseLogLevel = \case
+    "emerg" -> pure Emergency
+    "alert" -> pure Alert
+    "crit" -> pure Critical
+    "error" -> pure Error
+    "warn" -> pure Warning
+    "notice" -> pure Notice
+    "info" -> pure Informational
+    "debug" -> pure Debug
+    str -> Left $ "Unknown LogLevel: " <> show str
+
+instance FromJSON LogLevel where
+    parseJSON obj = parseJSON obj >>= either fail pure . parseLogLevel
 
 instance ToJSON LogLevel where
     toJSON Emergency     = String "emerg"
