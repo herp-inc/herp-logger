@@ -7,7 +7,6 @@ module Herp.Logger.Payload
 
 import Data.Aeson
 import Data.Semigroup
-import Data.Monoid
 import Data.String
 import Data.Text (Text)
 import Generic.Data
