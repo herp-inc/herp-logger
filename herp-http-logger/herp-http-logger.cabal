@@ -1,25 +1,19 @@
 cabal-version: 3.0
 
--- This file has been generated from package.yaml by hpack version 0.34.5.
---
--- see: https://github.com/sol/hpack
-
-name:           herp-logger
-version:        0.1.0.0
+name:           herp-http-logger
+version:        0
 description:    Please see the README on GitHub at <https://github.com/herp-inc/herp-hslib#readme>
 build-type:     Simple
 
 library
   ghc-options: -Wall -Wcompat -Wunused-packages
   exposed-modules:
-      Herp.Logger
-      Herp.Logger.LogLevel
-      Herp.Logger.Payload
-      Herp.Logger.SentryTransport
-      Herp.Logger.StdoutTransport
-      Herp.Logger.Transport
+      Herp.HttpLogger
+  other-modules:
+      Protos.Herp.Log.HttpLog
   hs-source-dirs:
       src
+      gen-proto
   default-extensions:
       ConstraintKinds
       DeriveDataTypeable
@@ -69,21 +63,15 @@ library
       ImportQualifiedPost
   build-depends:
       aeson
-    , async
     , base >=4.7 && <5
     , bytestring
-    , fast-logger
-    , generic-data
-    , monad-logger
-    , mtl
+    , case-insensitive
+    , containers
+    , deepseq
     , proto3-suite
-    , raven-haskell ==0.1.4.*
-    , resource-pool ^>= 0.3
-    , rio
-    , safe-exceptions
-    , stm
+    , proto3-wire
     , text
-    , unix-compat
-    , unix-time
-    , unordered-containers
+    , time
+    , vector
+    , wai
   default-language: Haskell2010
