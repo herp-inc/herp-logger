@@ -16,6 +16,7 @@ module Herp.Logger
     , Payload
     , P.level
     , P.message
+    , P.object
     -- * monad-logger
     , runLoggingT
     ) where

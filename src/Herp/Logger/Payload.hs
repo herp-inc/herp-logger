@@ -3,9 +3,11 @@
 module Herp.Logger.Payload
   ( Payload(..)
   , level
-  , message) where
+  , message
+  , object
+  ) where
 
-import Data.Aeson
+import Data.Aeson (Object, KeyValue(..))
 import Data.Semigroup
 import Data.Monoid
 import Data.String
@@ -30,6 +32,9 @@ level lvl = mempty { payloadLevel = Max lvl }
 
 message :: Text -> Payload
 message txt = mempty { payloadMessage = txt }
+
+object :: Object -> Payload
+object obj = mempty { payloadObject = obj }
 
 instance IsString Payload where
   fromString = message . fromString
