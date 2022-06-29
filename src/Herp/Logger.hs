@@ -20,6 +20,7 @@ module Herp.Logger
     , P.object
     -- * monad-logger
     , runLoggingT
+    , toLoggerIO
     ) where
 
 import "base" Prelude hiding (log)
@@ -246,24 +247,14 @@ serviceLogKey :: Text
 serviceLogKey = "service"
 
 runLoggingT :: Logger -> ML.LoggingT IO () -> IO ()
-runLoggingT logger (ML.LoggingT run) = run $ \loc logSrc lv logStr -> do
+runLoggingT logger (ML.LoggingT run) = run (toLoggerIO logger)
+
+-- | Convert a 'Logger' to one that's compabible with monad-logger
+toLoggerIO :: Logger -> ML.Loc -> ML.LogSource -> ML.LogLevel -> ML.LogStr -> IO ()
+toLoggerIO logger loc logSrc lv logStr = do
   let msg = Text.decodeUtf8 $ ML.fromLogStr $ ML.defaultLogStr loc logSrc lv logStr
-  lv' <- cnvlv lv
-  logIO logger $ P.level lv' <> P.message msg where
-    cnvlv ML.LevelDebug = return Debug
-    cnvlv ML.LevelInfo = return Informational
-    cnvlv ML.LevelWarn = return Warning
-    cnvlv ML.LevelError = return Error
-    cnvlv (ML.LevelOther text)
-      | text ~= "Notice" = return Notice
-      | text ~= "Critical" = return Critical
-      | text ~= "Alert" = return Alert
-      | text ~= "Emergency" = return Emergency
-      | otherwise = do
-        let msg = "A data constructor `LevelOther Text` of type of Control.Monad.Logger.LogLevel "
-                    <> "was captured while `loggerWrapper` is subscribing logs LaunchDarkly Haskell SDK "
-                    <> "outputs. The argument of the constructor says: "
-                    <> text
-        logIO logger $ P.level Notice <> P.message msg
-        return Warning
-    (~=) s t = Text.toCaseFold s == Text.toCaseFold t
+  logIO logger
+    $ P.message msg
+    <> case convertLogLevel lv of
+        Right x -> P.level x
+        Left other -> #warn <> "level" .= other
