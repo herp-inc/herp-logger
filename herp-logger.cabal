@@ -79,7 +79,6 @@ library
     , proto3-suite
     , raven-haskell ==0.1.4.*
     , resource-pool ^>= 0.3
-    , rio
     , safe-exceptions
     , stm
     , text

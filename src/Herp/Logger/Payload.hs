@@ -9,7 +9,6 @@ module Herp.Logger.Payload
 
 import Data.Aeson (Object, KeyValue(..))
 import Data.Semigroup
-import Data.Monoid
 import Data.String
 import Data.Text (Text)
 import Generic.Data
