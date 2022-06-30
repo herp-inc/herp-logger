@@ -12,6 +12,7 @@ import Data.Semigroup
 import Data.String
 import Data.Text (Text)
 import Generic.Data
+import GHC.Exts
 import GHC.OverloadedLabels
 import Herp.Logger.LogLevel
 
@@ -22,6 +23,11 @@ data Payload = Payload
   }
   deriving stock Generic
   deriving (Semigroup, Monoid) via Generically Payload
+
+instance IsList Payload where
+  type Item Payload = Payload
+  toList = pure
+  fromList = mconcat
 
 instance IsLabel k LogLevel => IsLabel k Payload where
   fromLabel = level (fromLabel @k)
