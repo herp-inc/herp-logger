@@ -12,6 +12,7 @@ module Herp.Logger
     , logIO
     , recordLog
     , urgentLog
+    , Herp.Logger.flush
     -- * Payload
     , Payload
     , P.level
@@ -19,10 +20,10 @@ module Herp.Logger
     , P.object
     -- * monad-logger
     , runLoggingT
+    , toLoggerIO
     ) where
 
 import "base" Prelude hiding (log)
-import "base" Data.List qualified as List
 import "base" Data.Semigroup (Max(..))
 
 #if MIN_VERSION_aeson(2,0,0)
@@ -30,18 +31,17 @@ import Data.Aeson.KeyMap as HashMap
 #else
 import "unordered-containers" Data.HashMap.Strict qualified as HashMap
 #endif
-import "base" Control.Concurrent ( forkIO, killThread, forkFinally )
+import "base" Control.Concurrent ( killThread, forkFinally )
 import "async" Control.Concurrent.Async (async, Async, cancel)
 import "base" Control.Monad (forever, forM, forM_, when)
 import "base" Control.Monad.IO.Class (MonadIO(liftIO))
 import "stm" Control.Concurrent.STM
 import Control.Monad.Logger qualified as ML
 import "base" System.IO (hSetBuffering, BufferMode(..), stdout)
-import "mtl" Control.Monad.Reader (ReaderT, ask, asks, MonadReader)
-import "aeson" Data.Aeson                     ((.=), Object, Value(..))
+import "mtl" Control.Monad.Reader (asks, MonadReader)
+import "aeson" Data.Aeson                     ((.=), Value(..))
 import "aeson" Data.Aeson qualified as A
 import "aeson" Data.Aeson.Encoding qualified as A
-import "aeson" Data.Aeson.Types               (Pair)
 import "bytestring" Data.ByteString.Lazy.Char8 qualified as BC
 import "bytestring" Data.ByteString.Short qualified as BS
 import "fast-logger" System.Log.FastLogger.Date (newTimeCache)
@@ -51,7 +51,6 @@ import "text" Data.Text.Encoding qualified as T
 import Data.UnixTime (formatUnixTime, fromEpochTime)
 import System.PosixCompat.Time (epochTime)
 import "proto3-suite" Proto3.Suite.JSONPB qualified as JSONPB
-import RIO (RIO(..))
 
 import Herp.Logger.Payload           as P
 import Herp.Logger.LogLevel          as X
@@ -63,9 +62,7 @@ import "base" GHC.Generics
 import "safe-exceptions" Control.Exception.Safe qualified as E
 
 
-newtype ThreadPool = ThreadPool
-    { unThreadPool :: Pool (TChan (IO ()), Async ())
-    }
+newtype ThreadPool = ThreadPool (Pool (TChan (IO ()), Async ()))
 
 type ConcurrencyLevel = Int
 
@@ -196,10 +193,10 @@ log' :: Logger -> FormattedTime -> Payload -> IO ()
 log' logger date obj = do
     let Logger { push } = logger
     let extraKey = "extra"
-    let level = getMax $ payloadLevel obj
-    when (checkToLog logger level) $ do
+    let lvl = getMax $ payloadLevel obj
+    when (checkToLog logger lvl) $ do
         push TransportInput
-            { level = level
+            { level = lvl
             , date = BS.toShort date
             , message = payloadMessage obj
             , extra = if HashMap.null $ payloadObject obj then Nothing else Just (extraKey, Object $ payloadObject obj)
@@ -227,7 +224,7 @@ flush = asks toLogger >>= liftIO . loggerFlush
 
 -- logging function for service log
 recordLog :: (MonadIO m, JSONPB.ToJSONPB serviceLog) => Logger -> Text -> serviceLog -> m ()
-recordLog logger message serviceLog = do
+recordLog logger msg serviceLog = do
     let msgLevel = Informational -- datadogはloglevelを要求する
     let Logger {push, timeCache} = logger
     when (checkToLog logger msgLevel) $ do
@@ -242,7 +239,7 @@ recordLog logger message serviceLog = do
         liftIO $ push TransportInput {
               level = msgLevel
             , date = BS.toShort date
-            , message
+            , message = msg
             , extra = Just (serviceLogKey, value)
             }
 
@@ -250,24 +247,14 @@ serviceLogKey :: Text
 serviceLogKey = "service"
 
 runLoggingT :: Logger -> ML.LoggingT IO () -> IO ()
-runLoggingT logger (ML.LoggingT run) = run $ \loc logSrc lv logStr -> do
+runLoggingT logger (ML.LoggingT run) = run (toLoggerIO logger)
+
+-- | Convert a 'Logger' to one that's compabible with monad-logger
+toLoggerIO :: Logger -> ML.Loc -> ML.LogSource -> ML.LogLevel -> ML.LogStr -> IO ()
+toLoggerIO logger loc logSrc lv logStr = do
   let msg = Text.decodeUtf8 $ ML.fromLogStr $ ML.defaultLogStr loc logSrc lv logStr
-  lv <- cnvlv lv
-  logIO logger $ P.level lv <> P.message msg where
-    cnvlv ML.LevelDebug = return Debug
-    cnvlv ML.LevelInfo = return Informational
-    cnvlv ML.LevelWarn = return Warning
-    cnvlv ML.LevelError = return Error
-    cnvlv (ML.LevelOther text)
-      | text ~= "Notice" = return Notice
-      | text ~= "Critical" = return Critical
-      | text ~= "Alert" = return Alert
-      | text ~= "Emergency" = return Emergency
-      | otherwise = do
-        let msg = "A data constructor `LevelOther Text` of type of Control.Monad.Logger.LogLevel "
-                    <> "was captured while `loggerWrapper` is subscribing logs LaunchDarkly Haskell SDK "
-                    <> "outputs. The argument of the constructor says: "
-                    <> text
-        logIO logger $ P.level Notice <> P.message msg
-        return Warning
-    (~=) s t = Text.toCaseFold s == Text.toCaseFold t
+  logIO logger
+    $ P.message msg
+    <> case convertLogLevel lv of
+        Right x -> P.level x
+        Left other -> #warn <> "level" .= other

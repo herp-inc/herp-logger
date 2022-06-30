@@ -6,7 +6,7 @@ module Herp.Logger.SentryTransport
     ) where
 
 import "text" Data.Text (Text, unpack)
-import "aeson" Data.Aeson (Object, Value)
+import "aeson" Data.Aeson (Value)
 import "unordered-containers" Data.HashMap.Strict (HashMap)
 import "raven-haskell" System.Log.Raven (register)
 import "raven-haskell" System.Log.Raven.Types

@@ -12,10 +12,8 @@ import Data.ByteString.Short qualified as SB
 import Data.Text.Encoding qualified as T
 
 #if MIN_VERSION_aeson(2,0,0)
-import Data.Aeson.KeyMap as HashMap
 import "aeson" Data.Aeson.Key (fromText)
 #else
-import Data.HashMap.Strict as HashMap
 import Data.Text
 fromText :: Text -> Text
 fromText = id

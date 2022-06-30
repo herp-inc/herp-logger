@@ -3,14 +3,18 @@
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Herp.Logger.LogLevel
     ( LogLevel(..)
     , parseLogLevel
+    , convertLogLevel
     ) where
 
 import "aeson"   Data.Aeson                     ( Value(String), ToJSON(..), FromJSON(..) )
 import "base"    GHC.OverloadedLabels           ( IsLabel(fromLabel) )
+import Control.Monad.Logger qualified as M
+import Data.Text (Text, toLower)
 
 -- | https://tools.ietf.org/html/rfc5424#section-6.2.1
 -- https://scrapbox.io/herp-inc/RFC_draft_%E3%83%AD%E3%82%B0%E3%83%AC%E3%83%99%E3%83%AB%E3%81%AB%E3%81%AF_syslog_%E5%BD%A2%E5%BC%8F%E3%82%92%E4%BD%BF%E3%81%86
@@ -27,6 +31,19 @@ data LogLevel
     deriving stock Ord
     deriving stock Show
     deriving stock Bounded
+
+-- | Convert 'M.LogLevel' to 'LogLevel'. Returns @'Left' str@ if there is no matching level.
+convertLogLevel :: M.LogLevel -> Either Text LogLevel
+convertLogLevel = \case
+    M.LevelDebug -> Right Debug
+    M.LevelInfo -> Right Informational
+    M.LevelWarn -> Right Warning
+    M.LevelError -> Right Error
+    M.LevelOther (toLower -> "notice") -> Right Notice
+    M.LevelOther (toLower -> "critical") -> Right Critical
+    M.LevelOther (toLower -> "alert") -> Right Alert
+    M.LevelOther (toLower -> "emergency") -> Right Emergency
+    M.LevelOther level -> Left level
 
 parseLogLevel :: String -> Either String LogLevel
 parseLogLevel = \case

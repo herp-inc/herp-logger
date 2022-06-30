@@ -6,7 +6,7 @@ module Herp.Logger.Transport
     ) where
 
 import "text" Data.Text
-import "aeson" Data.Aeson ( Object, Value )
+import "aeson" Data.Aeson ( Value )
 import "bytestring" Data.ByteString.Short (ShortByteString)
 import Herp.Logger.LogLevel ( LogLevel )
 import GHC.Generics (Generic)
