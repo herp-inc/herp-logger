@@ -1,4 +1,5 @@
 {-# LANGUAGE ExplicitForAll #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE CPP #-}
 
@@ -170,7 +171,7 @@ new concLevel loggerThresholdLevel transports = do
                 }
 
     let transportToValue tr = A.object ["name" .= name tr, "transport_level" .= threshold tr]
-    logIO logger $ mconcat
+    logIO logger
             [ #info
             , "logger.new"
             , "log_level" .= loggerThresholdLevel
@@ -255,7 +256,8 @@ toLoggerIO :: Logger -> ML.Loc -> ML.LogSource -> ML.LogLevel -> ML.LogStr -> IO
 toLoggerIO logger loc logSrc lv logStr = do
   let msg = Text.decodeUtf8 $ ML.fromLogStr $ ML.defaultLogStr loc logSrc lv logStr
   logIO logger
-    $ P.message msg
-    <> case convertLogLevel lv of
+    [ P.message msg
+    , case convertLogLevel lv of
         Right x -> P.level x
-        Left other -> #warn <> "level" .= other
+        Left other -> [#warn, "level" .= other]
+    ]
