@@ -209,15 +209,16 @@ instance HasLogger Logger where
     toLogger = id
 
 logIO :: MonadIO m => Logger -> Payload -> m ()
-logIO logger@Logger {timeCache} ~msg = do
+logIO logger@Logger {timeCache} msg = do
     date <- liftIO timeCache
     liftIO $ log' logger date msg
-{-# SPECIALIZE logIO :: Logger -> Payload -> IO () #-}
+{-# INLINE logIO #-}
 
 logM :: forall r m. (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
-logM ~msg = do
+logM msg = do
     logger <- asks toLogger
     logIO logger msg
+{-# INLINE logM #-}
 
 flush :: forall r m. (MonadReader r m, HasLogger r, MonadIO m) => m ()
 flush = asks toLogger >>= liftIO . loggerFlush
