@@ -13,8 +13,10 @@ import Data.Text.Encoding qualified as T
 
 #if MIN_VERSION_aeson(2,0,0)
 import "aeson" Data.Aeson.Key (fromText)
+import "aeson" Data.Aeson.KeyMap as KM
 #else
-import Data.Text
+import Data.HashMap.Strict qualified as KM
+import Data.Text (Text)
 fromText :: Text -> Text
 fromText = id
 #endif
@@ -28,9 +30,7 @@ stdoutTransport loggerSet transportThreshold =
                     <> "date" .= T.decodeUtf8 (SB.fromShort date)
                     <> "message" .= message
                     )
-            let value = A.pairs $ case extra of
-                    Just (key, val) -> series <> fromText key .= val
-                    Nothing -> series
+            let value = A.pairs $ series <> foldMap (uncurry (.=)) (KM.toList extra)
             let json = A.encodingToLazyByteString value
             pushLogStrLn loggerSet $ toLogStr json
         flush = flushLogStr loggerSet
