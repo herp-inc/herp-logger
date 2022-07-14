@@ -6,7 +6,7 @@ module Herp.Logger.Transport
     ) where
 
 import "text" Data.Text
-import "aeson" Data.Aeson ( Value )
+import "aeson" Data.Aeson ( Object )
 import "bytestring" Data.ByteString.Short (ShortByteString)
 import Herp.Logger.LogLevel ( LogLevel )
 import GHC.Generics (Generic)
@@ -15,7 +15,7 @@ data TransportInput = TransportInput
     { message :: Text
     , date :: ShortByteString
     , level :: LogLevel
-    , extra :: Maybe (Text, Value)
+    , extra :: Object
     }
     deriving stock Generic
 

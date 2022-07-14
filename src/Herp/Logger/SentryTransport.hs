@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -5,8 +6,9 @@ module Herp.Logger.SentryTransport
     ( sentry
     ) where
 
-import "text" Data.Text (Text, unpack)
-import "aeson" Data.Aeson (Value)
+import Data.Bifunctor (first)
+import "text" Data.Text ( unpack)
+import "aeson" Data.Aeson (Object, Value)
 import "unordered-containers" Data.HashMap.Strict (HashMap)
 import "raven-haskell" System.Log.Raven (register)
 import "raven-haskell" System.Log.Raven.Types
@@ -18,6 +20,16 @@ import "unordered-containers" Data.HashMap.Strict qualified as HashMap
 import Herp.Logger.LogLevel qualified as Level (LogLevel(..))
 import Herp.Logger.Transport (Transport(..), TransportInput(..))
 
+
+#if MIN_VERSION_aeson(2,0,0)
+import "aeson" Data.Aeson.Key (toText)
+import "aeson" Data.Aeson.KeyMap qualified as KM
+#else
+import Data.HashMap.Strict qualified as KM
+import Data.Text (Text)
+toText :: Text -> Text
+toText = id
+#endif
 
 sentry :: SentryService -> Level.LogLevel -> Transport
 sentry svc transportThreshold =
@@ -37,9 +49,8 @@ sentry svc transportThreshold =
         , flush
         }
 
-mkSRExtra :: Maybe (Text, Value) -> HashMap String Value
-mkSRExtra (Just (key, val)) = HashMap.singleton (unpack key) val
-mkSRExtra Nothing = mempty
+mkSRExtra :: Object -> HashMap String Value
+mkSRExtra = HashMap.fromList . map (first (unpack . toText)) . KM.toList
 
 convertLevel :: Level.LogLevel -> SentryLevel
 convertLevel Level.Emergency     = Fatal

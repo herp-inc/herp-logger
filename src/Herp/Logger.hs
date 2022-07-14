@@ -27,11 +27,6 @@ module Herp.Logger
 import "base" Prelude hiding (log)
 import "base" Data.Semigroup (Max(..))
 
-#if MIN_VERSION_aeson(2,0,0)
-import Data.Aeson.KeyMap as HashMap
-#else
-import "unordered-containers" Data.HashMap.Strict qualified as HashMap
-#endif
 import "base" Control.Concurrent ( killThread, forkFinally )
 import "async" Control.Concurrent.Async (async, Async, cancel)
 import "base" Control.Monad (forever, forM, forM_, when)
@@ -40,7 +35,7 @@ import "stm" Control.Concurrent.STM
 import Control.Monad.Logger qualified as ML
 import "base" System.IO (hSetBuffering, BufferMode(..), stdout)
 import "mtl" Control.Monad.Reader (asks, MonadReader)
-import "aeson" Data.Aeson                     ((.=), Value(..))
+import "aeson" Data.Aeson                     ((.=))
 import "aeson" Data.Aeson qualified as A
 import "aeson" Data.Aeson.Encoding qualified as A
 import "bytestring" Data.ByteString.Lazy.Char8 qualified as BC
@@ -109,8 +104,8 @@ timestampFormat = "%Y-%m-%dT%H:%M:%S%z"
 
 -- | `urgentLog` outputs log to stdout without logger.
 --   It's used when logger is busy, not created or in trouble.
-urgentLog :: LogLevel -> Text -> Maybe A.Encoding -> IO ()
-urgentLog msgLevel msg mextra = do
+urgentLog :: LogLevel -> Text -> A.Series -> IO ()
+urgentLog msgLevel msg extra = do
     hSetBuffering stdout LineBuffering
     now <- epochTime
     date <- formatUnixTime timestampFormat $ fromEpochTime now
@@ -118,10 +113,7 @@ urgentLog msgLevel msg mextra = do
                "level" .= msgLevel
             <> "date" .= T.decodeUtf8 date
             <> "message" .= msg
-    let series' = A.pairs $ case mextra of
-                Just extra ->  series <> A.pair "extra" extra
-                Nothing -> series
-    BC.putStrLn $ A.encodingToLazyByteString series'
+    BC.putStrLn $ A.encodingToLazyByteString $ A.pairs $ series <> extra
 
 new :: ConcurrencyLevel -> LogLevel -> [Transport] -> IO Logger
 new concLevel loggerThresholdLevel transports = do
@@ -134,10 +126,8 @@ new concLevel loggerThresholdLevel transports = do
             mkThreadPool
                 concLevel
                 (\e -> urgentLog Error "Exception occurred in runTransport" $
-                        Just $ A.pairs (
                            "exception" .= E.displayException e
-                        <> "transport" .= name
-                        ))
+                        <> "transport" .= name)
 
         -- まだ書き込まれていないログを本スレッドで処理する
         let drain _ = atomically (flushTQueue queue) >>= mapM_ runTransport
@@ -193,14 +183,13 @@ checkToLog logger msgLevel =
 log' :: Logger -> FormattedTime -> Payload -> IO ()
 log' logger date obj = do
     let Logger { push } = logger
-    let extraKey = "extra"
     let lvl = getMax $ payloadLevel obj
     when (checkToLog logger lvl) $ do
         push TransportInput
             { level = lvl
             , date = BS.toShort date
             , message = payloadMessage obj
-            , extra = if HashMap.null $ payloadObject obj then Nothing else Just (extraKey, Object $ payloadObject obj)
+            , extra = payloadObject obj
             }
 
 class HasLogger a where
@@ -242,11 +231,8 @@ recordLog logger msg serviceLog = do
               level = msgLevel
             , date = BS.toShort date
             , message = msg
-            , extra = Just (serviceLogKey, value)
+            , extra = "service" .= value
             }
-
-serviceLogKey :: Text
-serviceLogKey = "service"
 
 runLoggingT :: Logger -> ML.LoggingT IO () -> IO ()
 runLoggingT logger (ML.LoggingT run) = run (toLoggerIO logger)
