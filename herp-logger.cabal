@@ -5,7 +5,7 @@ cabal-version: 3.0
 -- see: https://github.com/sol/hpack
 
 name:           herp-logger
-version:        0.1.0.0
+version:        0.2
 description:    Please see the README on GitHub at <https://github.com/herp-inc/herp-hslib#readme>
 build-type:     Simple
 
