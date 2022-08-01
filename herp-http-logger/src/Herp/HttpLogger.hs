@@ -20,8 +20,8 @@ import qualified "wai" Network.Wai as Wai
 
 import Protos.Herp.Log.HttpLog
   (HttpHeader (..), HttpQueryItem (..),
-   HttpRequest (..), HttpResponse (..), HttpLog (..))
-
+   HttpRequest (..), HttpResponse (..), HttpLog (..),
+   HttpUserInfo (..))
 
 data LogConfig =
   LogConfig
@@ -33,6 +33,7 @@ logApplication :: (lvl -> msg -> Object -> IO ())
                -> (HttpLog -> lvl)
                -> (HttpLog -> msg)
                -> LogConfig
+               -> (Wai.Request -> Wai.Response -> Maybe HttpUserInfo)
                -> Middleware {- Application -> Application -}
 logApplication putLog lvl msg =
   logApplication_ (putHttpLog putLog lvl msg)
@@ -60,26 +61,28 @@ putHttpLog  putLog lvl msg log_ =
 
 logApplication_ :: (HttpLog -> IO ())
                 -> LogConfig
+                -> (Wai.Request -> Wai.Response -> Maybe HttpUserInfo)
                 -> Middleware {- Application -> Application -}
-logApplication_ sendLog config app req respCallback0
+logApplication_ sendLog config getUserInfo app req respCallback0
   | isFilteringOutPath config $ Wai.rawPathInfo req  =
       app req respCallback0
   | otherwise  = do
       reqTs  <- getPOSIXTime
       let respCallback resp = do
             respTs <- getPOSIXTime
-            sendLog $ mkLog (removeHeaders config) (reqTs, req) (respTs, resp)
+            sendLog $ mkLog (removeHeaders config) (reqTs, req) (respTs, resp) (getUserInfo req resp)
             respCallback0 resp
       app req respCallback
 
 -----
 
-mkLog :: [ByteString] -> (POSIXTime, Wai.Request) -> (POSIXTime, Wai.Response) -> HttpLog
-mkLog rmHeaders0 (reqTs, req) (respTs, resp) =
+mkLog :: [ByteString] -> (POSIXTime, Wai.Request) -> (POSIXTime, Wai.Response) -> Maybe HttpUserInfo -> HttpLog
+mkLog rmHeaders0 (reqTs, req) (respTs, resp) userInfo =
     HttpLog
     { httpLogTimestampMs = toMillisecond reqTs
     , httpLogRequest = Just request_
     , httpLogResponse = Just response_
+    , httpLogUserInfo = userInfo
     }
   where
     request_ =
@@ -128,6 +131,7 @@ _exampleWaiLog =
   { httpLogTimestampMs = 0
   , httpLogRequest = Just req
   , httpLogResponse = Just resp
+  , httpLogUserInfo = Just userInfo
   }
   where
     req =
@@ -150,4 +154,9 @@ _exampleWaiLog =
       HttpResponse
       { httpResponseTimestampMs = 0
       , httpResponseResponseStatus = "200"
+      }
+    userInfo =
+      HttpUserInfo
+      { httpUserInfoUserId = "info@herp.co.jp"
+      , httpUserInfoCompanyId = "C-464R6"
       }
