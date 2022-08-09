@@ -18,6 +18,8 @@ library
       Herp.Logger.SentryTransport
       Herp.Logger.StdoutTransport
       Herp.Logger.Transport
+      Herp.Logger.ANSI.Coloring
+      Herp.Logger.StdoutANSITransport
   hs-source-dirs:
       src
   default-extensions:
@@ -69,6 +71,7 @@ library
       ImportQualifiedPost
   build-depends:
       aeson
+    , ansi-terminal
     , async
     , base >=4.7 && <5
     , bytestring
