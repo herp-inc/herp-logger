@@ -98,3 +98,15 @@ test-suite stdout
     , fast-logger
     , mtl
   default-language: Haskell2010
+
+test-suite ignore-debug-message
+  type: exitcode-stdio-1.0
+  main-is: ignoreDebugMessage.hs
+  hs-source-dirs:
+      tests
+  build-depends:
+      base >=4.7 && <5
+    , herp-logger
+    , fast-logger
+    , mtl
+  default-language: Haskell2010
