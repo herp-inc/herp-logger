@@ -15,7 +15,7 @@ import Data.Text.Encoding qualified as T
 #if MIN_VERSION_aeson(2,0,0)
 import "aeson" Data.Aeson.Key (fromText)
 import "aeson" Data.Aeson.KeyMap as KM
-import Herp.Logger.ANSI.Coloring (setLogColor, resetLogColor)
+import Herp.Logger.ANSI.Coloring
 #else
 import Data.HashMap.Strict qualified as KM
 import Data.Text (Text)
@@ -34,8 +34,8 @@ stdoutANSITransport loggerSet transportThreshold =
                     )
             let value = A.pairs $ series <> foldMap (uncurry (.=)) (KM.toList extra)
             let json = A.encodingToLazyByteString value
-            -- TODO: Fix to allow colorized output
-            pushLogStrLn loggerSet $ toLogStr json
+            -- pushLogStrLn loggerSet (toLogStr json)
+            pushLogStrLn loggerSet (toLogStr (coloringLogInfoStr level json))
         flush = flushLogStr loggerSet
      in Transport
             { name = name
