@@ -11,8 +11,8 @@ import Herp.Logger as Logger
 import Herp.Logger.StdoutTransport
 import System.Log.FastLogger.LoggerSet as LS
 
-loggerLevelTest loggerSet lv = do
-    logger <- Logger.new 1 lv [stdoutTransport loggerSet Debug]
+loggerLevelTest loggerSet transports lv = do
+    logger <- Logger.new 1 lv transports
 
     flip runReaderT logger $ do
         logM [ #debug, "debug" ]
@@ -23,10 +23,11 @@ loggerLevelTest loggerSet lv = do
         logM [ #crit, "lorem ipsum" ]
         logM [ #alert, "lorem ipsum" ]
         logM [ #emerg, "lorem ipsum" ]
-    
+
     loggerCleanup logger
 
 main :: IO ()
 main = bracket (LS.newStdoutLoggerSet 4096) LS.rmLoggerSet $ \loggerSet -> do
-    loggerLevelTest loggerSet Debug
-    loggerLevelTest loggerSet Informational
+    loggerLevelTest loggerSet [stdoutTransport loggerSet Debug] Debug
+    loggerLevelTest loggerSet [stdoutTransport loggerSet Debug] Informational
+    loggerLevelTest loggerSet [stdoutANSITransport loggerSet Debug] Debug
