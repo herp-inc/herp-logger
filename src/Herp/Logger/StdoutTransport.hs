@@ -46,8 +46,7 @@ convertTransportInputToEncoding
                     <> "date" .= T.decodeUtf8 (SB.fromShort date)
                     <> "message" .= message
                 )
-            value = A.pairs $ series <> foldMap (uncurry (.=)) (KM.toList extra)
-         in value
+         in A.pairs $ series <> foldMap (uncurry (.=)) (KM.toList extra)
 
 stdoutTransport :: LoggerSet -> LogLevel -> Transport
 stdoutTransport = stdoutTransport' "stdout" push
