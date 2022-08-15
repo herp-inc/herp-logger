@@ -31,4 +31,3 @@ main = bracket (LS.newStdoutLoggerSet 4096) LS.rmLoggerSet $ \loggerSet -> do
     loggerLevelTest loggerSet [stdoutTransport loggerSet Debug] Debug
     loggerLevelTest loggerSet [stdoutTransport loggerSet Debug] Informational
     loggerLevelTest loggerSet [stdoutANSITransport loggerSet Debug] Debug
-    loggerLevelTest loggerSet [stdoutANSITransport loggerSet Debug] Informational
