@@ -19,7 +19,6 @@ library
       Herp.Logger.StdoutTransport
       Herp.Logger.Transport
       Herp.Logger.ANSI.Coloring
-      Herp.Logger.StdoutANSITransport
   hs-source-dirs:
       src
   default-extensions:
