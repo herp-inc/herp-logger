@@ -8,7 +8,9 @@ module Herp.Logger
     , Logger(..)
     , HasLogger(..)
     , LogLevel(..)
-    , new
+    , LoggerConfig(..)
+    , newLogger
+    , defaultLoggerConfig
     , logM
     , logIO
     , recordLog
@@ -41,6 +43,7 @@ import "aeson" Data.Aeson.Encoding qualified as A
 import "bytestring" Data.ByteString.Lazy.Char8 qualified as BC
 import "bytestring" Data.ByteString.Short qualified as BS
 import "fast-logger" System.Log.FastLogger.Date (newTimeCache)
+import "fast-logger" System.Log.FastLogger.LoggerSet
 import "fast-logger" System.Log.FastLogger.Types (FormattedTime, TimeFormat)
 import "resource-pool" Data.Pool
 import "text" Data.Text.Encoding qualified as T
@@ -51,6 +54,7 @@ import "proto3-suite" Proto3.Suite.JSONPB qualified as JSONPB
 import Herp.Logger.Payload           as P
 import Herp.Logger.LogLevel          as X
 import Herp.Logger.Transport         as X
+import Herp.Logger.StdoutTransport
 
 import "text" Data.Text as Text
 import "text" Data.Text.Encoding as Text
@@ -115,16 +119,31 @@ urgentLog msgLevel msg extra = do
             <> "message" .= msg
     BC.putStrLn $ A.encodingToLazyByteString $ A.pairs $ series <> extra
 
-new :: ConcurrencyLevel -> LogLevel -> [Transport] -> IO Logger
-new concLevel loggerThresholdLevel transports = do
-    timeCache <- newTimeCache timestampFormat
+data LoggerConfig = LoggerConfig
+    { createTransports :: IO [Transport]
+    , concurrencyLevel :: ConcurrencyLevel
+    , logLevel :: LogLevel
+    }
 
+defaultLoggerConfig :: LoggerConfig
+defaultLoggerConfig = LoggerConfig
+        { createTransports = do
+            ls <- newStdoutLoggerSet 4096
+            pure [stdoutTransport ls Debug]
+        , concurrencyLevel = 1
+        , logLevel = Debug
+        }
+
+newLogger :: LoggerConfig -> IO Logger
+newLogger LoggerConfig{..} = do
+    timeCache <- newTimeCache timestampFormat
+    transports <- createTransports
     -- Initializing transports
     tids <- forM transports \Transport {name, runTransport, threshold = transportThreshold} -> do
         queue <- newTQueueIO
         thPool <-
             mkThreadPool
-                concLevel
+                concurrencyLevel
                 (\e -> urgentLog Error "Exception occurred in runTransport" $
                            "exception" .= E.displayException e
                         <> "transport" .= name)
@@ -152,8 +171,8 @@ new concLevel loggerThresholdLevel transports = do
 
     let logger =
             Logger
-                { loggerThresholdLevel
-                , transports
+                { loggerThresholdLevel = logLevel
+                , transports = transports
                 , timeCache
                 , push = \input -> forM_ tids $ \(_, _, write) -> atomically $ write input
                 , loggerCleanup
@@ -164,7 +183,7 @@ new concLevel loggerThresholdLevel transports = do
     logIO logger
             [ #info
             , "logger.new"
-            , "log_level" .= loggerThresholdLevel
+            , "log_level" .= logLevel
             , "transports" .= fmap transportToValue transports
             ]
     pure logger
