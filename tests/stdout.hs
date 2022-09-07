@@ -12,7 +12,7 @@ import Herp.Logger.StdoutTransport
 import System.Log.FastLogger.LoggerSet as LS
 
 loggerLevelTest loggerSet transports lv = do
-    logger <- Logger.new 1 lv transports
+    logger <- Logger.newLogger defaultLoggerConfig { logLevel = lv, createTransports = pure transports }
 
     flip runReaderT logger $ do
         logM [ #debug, "debug" ]
