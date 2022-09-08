@@ -35,7 +35,7 @@ import "base" Control.Monad (forever, forM, forM_, when)
 import "base" Control.Monad.IO.Class (MonadIO(liftIO))
 import "stm" Control.Concurrent.STM
 import Control.Monad.Logger qualified as ML
-import "base" System.IO (hSetBuffering, BufferMode(..), stdout)
+import "base" System.IO (hSetBuffering, BufferMode(..), stdout, hIsTerminalDevice)
 import "mtl" Control.Monad.Reader (asks, MonadReader)
 import "aeson" Data.Aeson                     ((.=))
 import "aeson" Data.Aeson qualified as A
@@ -126,10 +126,14 @@ data LoggerConfig = LoggerConfig
     }
 
 defaultLoggerConfig :: LoggerConfig
-defaultLoggerConfig = LoggerConfig
+defaultLoggerConfig =
+    LoggerConfig
         { createTransports = do
             ls <- newStdoutLoggerSet 4096
-            pure [stdoutTransport ls Debug]
+            istty <-  hIsTerminalDevice stdout
+            if istty
+                then pure [stdoutANSITransport ls Debug]
+                else pure [stdoutTransport ls Debug]
         , concurrencyLevel = 1
         , logLevel = Debug
         }
