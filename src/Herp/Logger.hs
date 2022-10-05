@@ -51,8 +51,8 @@ import System.PosixCompat.Time (epochTime)
 
 import Herp.Logger.Payload           as P
 import Herp.Logger.LogLevel          as X
-import Herp.Logger.Transport         as X
-import Herp.Logger.StdoutTransport
+import Herp.Logger.Transport.Types   as X
+import Herp.Logger.Transport.Stdout  as X
 
 import "text" Data.Text as Text
 import "text" Data.Text.Encoding as Text

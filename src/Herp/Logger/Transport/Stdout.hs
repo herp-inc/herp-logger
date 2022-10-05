@@ -1,12 +1,12 @@
 {-# LANGUAGE CPP #-}
 
-module Herp.Logger.StdoutTransport (
+module Herp.Logger.Transport.Stdout (
     stdoutTransport,
     stdoutANSITransport,
 ) where
 
 import Herp.Logger.LogLevel
-import Herp.Logger.Transport
+import Herp.Logger.Transport.Types
 import "fast-logger" System.Log.FastLogger (LoggerSet, ToLogStr (toLogStr), flushLogStr, pushLogStrLn)
 
 import "aeson" Data.Aeson ((.=))
