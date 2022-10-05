@@ -257,7 +257,7 @@ recordLog logger msg serviceLog = do
             , extra = "service" .= value
             }
 
-runLoggingT :: Logger -> ML.LoggingT IO () -> IO ()
+runLoggingT :: forall m a. Logger -> ML.LoggingT m a -> m a
 runLoggingT logger (ML.LoggingT run) = run (toLoggerIO logger)
 
 -- | Convert a 'Logger' to one that's compabible with monad-logger
