@@ -1,12 +1,12 @@
 {-# LANGUAGE CPP #-}
 
-module Herp.Logger.StdoutTransport (
+module Herp.Logger.Transport.Stdout (
     stdoutTransport,
     stdoutANSITransport,
 ) where
 
 import Herp.Logger.LogLevel
-import Herp.Logger.Transport
+import Herp.Logger.Transport.Types
 import "fast-logger" System.Log.FastLogger (LoggerSet, ToLogStr (toLogStr), flushLogStr, pushLogStrLn)
 
 import "aeson" Data.Aeson ((.=))
@@ -18,13 +18,9 @@ import Data.Text.Encoding qualified as T
 import Herp.Logger.ANSI.Coloring (coloringLogInfoStr)
 
 #if MIN_VERSION_aeson(2,0,0)
-import "aeson" Data.Aeson.Key (fromText)
 import "aeson" Data.Aeson.KeyMap as KM
 #else
 import Data.HashMap.Strict qualified as KM
-import Data.Text (Text)
-fromText :: Text -> Text
-fromText = id
 #endif
 
 stdoutTransport' :: Text -> (LoggerSet -> TransportInput -> IO ()) -> LoggerSet -> LogLevel -> Transport

@@ -15,9 +15,9 @@ library
       Herp.Logger
       Herp.Logger.LogLevel
       Herp.Logger.Payload
-      Herp.Logger.SentryTransport
-      Herp.Logger.StdoutTransport
-      Herp.Logger.Transport
+      Herp.Logger.Transport.Sentry
+      Herp.Logger.Transport.Stdout
+      Herp.Logger.Transport.Types
       Herp.Logger.ANSI.Coloring
   hs-source-dirs:
       src
@@ -79,7 +79,6 @@ library
     , generic-data
     , monad-logger
     , mtl
-    , proto3-suite
     , raven-haskell ==0.1.4.*
     , resource-pool ^>= 0.3
     , safe-exceptions

@@ -1,6 +1,6 @@
 {-# LANGUAGE PackageImports #-}
 
-module Herp.Logger.Transport
+module Herp.Logger.Transport.Types
     ( Transport(..)
     , TransportInput(..)
     ) where

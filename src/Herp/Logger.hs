@@ -13,7 +13,6 @@ module Herp.Logger
     , defaultLoggerConfig
     , logM
     , logIO
-    , recordLog
     , urgentLog
     , Herp.Logger.flush
     -- * Payload
@@ -49,12 +48,11 @@ import "resource-pool" Data.Pool
 import "text" Data.Text.Encoding qualified as T
 import Data.UnixTime (formatUnixTime, fromEpochTime)
 import System.PosixCompat.Time (epochTime)
-import "proto3-suite" Proto3.Suite.JSONPB qualified as JSONPB
 
 import Herp.Logger.Payload           as P
 import Herp.Logger.LogLevel          as X
-import Herp.Logger.Transport         as X
-import Herp.Logger.StdoutTransport
+import Herp.Logger.Transport.Types   as X
+import Herp.Logger.Transport.Stdout  as X
 
 import "text" Data.Text as Text
 import "text" Data.Text.Encoding as Text
@@ -235,27 +233,6 @@ logM msg = do
 
 flush :: forall r m. (MonadReader r m, HasLogger r, MonadIO m) => m ()
 flush = asks toLogger >>= liftIO . loggerFlush
-
--- logging function for service log
-recordLog :: (MonadIO m, JSONPB.ToJSONPB serviceLog) => Logger -> Text -> serviceLog -> m ()
-recordLog logger msg serviceLog = do
-    let msgLevel = Informational -- datadogはloglevelを要求する
-    let Logger {push, timeCache} = logger
-    when (checkToLog logger msgLevel) $ do
-        let options =
-                JSONPB.jsonPBOptions
-                    { -- NOTE: BigQueryで扱いやすくするため、デフォルト値を省略せず、oneofは使わない
-                      JSONPB.optEmitDefaultValuedFields = True,
-                      JSONPB.optEmitNamedOneof = False
-                    }
-        let value = JSONPB.toJSONPB serviceLog options
-        date <- liftIO timeCache
-        liftIO $ push TransportInput {
-              level = msgLevel
-            , date = BS.toShort date
-            , message = msg
-            , extra = "service" .= value
-            }
 
 runLoggingT :: forall m a. Logger -> ML.LoggingT m a -> m a
 runLoggingT logger (ML.LoggingT run) = run (toLoggerIO logger)

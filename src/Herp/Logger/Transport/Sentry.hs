@@ -2,7 +2,7 @@
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Herp.Logger.SentryTransport
+module Herp.Logger.Transport.Sentry
     ( sentry
     ) where
 
@@ -18,7 +18,7 @@ import "raven-haskell" System.Log.Raven.Types
     )
 import "unordered-containers" Data.HashMap.Strict qualified as HashMap
 import Herp.Logger.LogLevel qualified as Level (LogLevel(..))
-import Herp.Logger.Transport (Transport(..), TransportInput(..))
+import Herp.Logger.Transport.Types (Transport(..), TransportInput(..))
 
 
 #if MIN_VERSION_aeson(2,0,0)

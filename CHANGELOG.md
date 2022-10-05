@@ -1,3 +1,8 @@
+Unreleased
+----
+
+* recordLogを削除
+
 v0.2
 ----
 
