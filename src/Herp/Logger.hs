@@ -12,6 +12,15 @@ module Herp.Logger
     , newLogger
     , defaultLoggerConfig
     , logM
+    , logOtherM
+    , logDebugM
+    , logInfoM
+    , logNoticeM
+    , logWarnM
+    , logErrorM
+    , logCritM
+    , logAlertM
+    , logEmergM
     , logIO
     , urgentLog
     , Herp.Logger.flush
@@ -230,6 +239,33 @@ logM msg = do
     logger <- asks toLogger
     logIO logger msg
 {-# INLINE logM #-}
+
+logOtherM :: (MonadReader r m, HasLogger r, MonadIO m) => LogLevel -> Payload -> m ()
+logOtherM logLevel payload = logM $ P.level logLevel <> payload
+
+logDebugM :: (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
+logDebugM = logOtherM Debug
+
+logInfoM :: (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
+logInfoM = logOtherM Informational
+
+logNoticeM :: (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
+logNoticeM = logOtherM Notice
+
+logWarnM :: (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
+logWarnM = logOtherM Warning
+
+logErrorM :: (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
+logErrorM = logOtherM Error
+
+logCritM :: (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
+logCritM = logOtherM Critical
+
+logAlertM :: (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
+logAlertM = logOtherM Alert
+
+logEmergM :: (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
+logEmergM = logOtherM Emergency
 
 flush :: forall r m. (MonadReader r m, HasLogger r, MonadIO m) => m ()
 flush = asks toLogger >>= liftIO . loggerFlush
