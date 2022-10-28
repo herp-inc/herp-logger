@@ -8,7 +8,7 @@ import Control.Concurrent (threadDelay)
 import Control.Exception (bracket)
 import Control.Monad.Reader
 import Herp.Logger as Logger
-import Herp.Logger.StdoutTransport
+import Herp.Logger.Transport.Stdout
 import System.Log.FastLogger.LoggerSet as LS
 
 loggerLevelTest config = do
