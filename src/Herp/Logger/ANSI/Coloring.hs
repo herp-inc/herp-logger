@@ -2,8 +2,30 @@ module Herp.Logger.ANSI.Coloring where
 
 import Data.Colour.SRGB
 import Data.String
-import Herp.Logger.LogLevel (LogLevel (..))
+import Herp.Logger.LogLevel (LogLevel (..), convertLogLevelToStr)
 import System.Console.ANSI
+    ( setSGRCode,
+      ConsoleIntensity(..),
+      ConsoleLayer(..),
+      SGR(..) )
+import qualified Data.ByteString.Lazy.Char8 as B
+import Herp.Logger.Transport.Types ( TransportInput(..) )
+import qualified Data.ByteString.Short as SB
+import qualified Data.Aeson as A
+import Text.Pretty.Simple
+    ( ColorOptions(..),
+      pStringOpt,
+      defaultColorOptionsDarkBg,
+      defaultOutputOptionsDarkBg,
+      OutputOptions(..),
+      Color(..),
+      Intensity(..) )
+import Text.Pretty.Simple.Internal.Color (colorBold)
+import Data.ByteString.Lazy.Char8 (ByteString)
+import Data.Int (Int64)
+import qualified Data.Text.Lazy.Encoding as T
+import qualified Data.Text.Lazy as T
+import qualified Data.Char as Char
 
 -- https://hackage.haskell.org/package/ansi-terminal-0.11.3/docs/System-Console-ANSI-Types.html#t:SGR
 
@@ -23,8 +45,45 @@ setLogColorStr level =
     let sgrLogInfo = logLevelToSGR level
      in fromString (setSGRCode sgrLogInfo)
 
-resetLogColorStr :: IsString a => a
-resetLogColorStr = fromString (setSGRCode [Reset])
+resetSGRStr :: IsString a => a
+resetSGRStr = fromString (setSGRCode [Reset])
 
-coloringLogInfoStr :: (IsString a, Semigroup a) => LogLevel -> a -> a
-coloringLogInfoStr level str = setLogColorStr level <> " " <> resetLogColorStr <> " " <> str
+colorBar :: (Semigroup a, IsString a) => LogLevel -> a
+colorBar lv = setLogColorStr lv <> " " <> resetSGRStr <> " "
+
+insertPrefix :: ByteString -> ByteString -> ByteString
+insertPrefix prefixStr str = B.intercalate "\n" $ fmap (prefixStr <>) (B.lines str)
+
+insertIndent :: Int64 -> ByteString -> ByteString
+insertIndent n = insertPrefix (B.replicate n ' ')
+
+insertColorBarIndent :: LogLevel -> ByteString -> ByteString
+insertColorBarIndent lv = insertPrefix (colorBar lv)
+
+toBold :: (Monoid a, IsString a) => a -> a
+toBold x = mconcat [fromString $ setSGRCode [SetConsoleIntensity BoldIntensity], x, resetSGRStr]
+
+encloseBracket :: (Semigroup a, IsString a) => a -> a
+encloseBracket x = "[" <> x <> "]"
+
+convertTransportInputToFormattedMessageANSI :: TransportInput -> ByteString
+convertTransportInputToFormattedMessageANSI TransportInput{message, date, level, extra} =
+        let msg = mconcat
+                    [ encloseBracket . B.fromStrict . SB.fromShort $ date
+                    , encloseBracket . toBold . B.pack . capitalized . convertLogLevelToStr $ level
+                    , " "
+                    , T.encodeUtf8 . T.fromStrict $ message
+                    ]
+            enc = A.encode extra
+            opt = defaultOutputOptionsDarkBg
+                { outputOptionsIndentAmount = 2
+                , outputOptionsColorOptions = Just colorOpt
+                }
+            objStr = T.encodeUtf8 . pStringOpt opt . B.unpack $ enc
+        in case enc of
+            "{}" -> insertColorBarIndent level msg
+            _ -> insertColorBarIndent level $ msg <> "\n" <> insertIndent 2 objStr
+    where
+        colorOpt = defaultColorOptionsDarkBg { colorString = colorBold Vivid Cyan }
+        capitalized (x:xs) = Char.toUpper x : xs
+        capitalized [] = []

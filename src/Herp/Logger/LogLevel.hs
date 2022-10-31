@@ -9,12 +9,14 @@ module Herp.Logger.LogLevel
     ( LogLevel(..)
     , parseLogLevel
     , convertLogLevel
+    , convertLogLevelToStr
     ) where
 
 import "aeson"   Data.Aeson                     ( Value(String), ToJSON(..), FromJSON(..) )
 import "base"    GHC.OverloadedLabels           ( IsLabel(fromLabel) )
 import Control.Monad.Logger qualified as M
 import Data.Text (Text, toLower)
+import Data.String (IsString)
 
 -- | https://tools.ietf.org/html/rfc5424#section-6.2.1
 -- https://scrapbox.io/herp-inc/RFC_draft_%E3%83%AD%E3%82%B0%E3%83%AC%E3%83%99%E3%83%AB%E3%81%AB%E3%81%AF_syslog_%E5%BD%A2%E5%BC%8F%E3%82%92%E4%BD%BF%E3%81%86
@@ -60,15 +62,19 @@ parseLogLevel = \case
 instance FromJSON LogLevel where
     parseJSON obj = parseJSON obj >>= either fail pure . parseLogLevel
 
+convertLogLevelToStr :: (IsString a) => LogLevel -> a
+convertLogLevelToStr = \case
+    Emergency     -> "emerg"
+    Alert         -> "alert"
+    Critical      -> "crit"
+    Error         -> "error"
+    Warning       -> "warn"
+    Notice        -> "notice"
+    Informational -> "info"
+    Debug         -> "debug"
+
 instance ToJSON LogLevel where
-    toJSON Emergency     = String "emerg"
-    toJSON Alert         = String "alert"
-    toJSON Critical      = String "crit"
-    toJSON Error         = String "error"
-    toJSON Warning       = String "warn"
-    toJSON Notice        = String "notice"
-    toJSON Informational = String "info"
-    toJSON Debug         = String "debug"
+    toJSON = String . convertLogLevelToStr
 
 instance IsLabel "emerg" LogLevel where
     fromLabel = Emergency

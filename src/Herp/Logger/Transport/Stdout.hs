@@ -15,7 +15,8 @@ import "aeson" Data.Aeson.Encoding qualified as A
 import Data.ByteString.Short qualified as SB
 import Data.Text (Text)
 import Data.Text.Encoding qualified as T
-import Herp.Logger.ANSI.Coloring (coloringLogInfoStr)
+import Herp.Logger.ANSI.Coloring
+    ( convertTransportInputToFormattedMessageANSI )
 
 #if MIN_VERSION_aeson(2,0,0)
 import "aeson" Data.Aeson.KeyMap as KM
@@ -55,7 +56,6 @@ stdoutTransport = stdoutTransport' "stdout" push
 stdoutANSITransport :: LoggerSet -> LogLevel -> Transport
 stdoutANSITransport = stdoutTransport' "stdoutANSI" push
   where
-    push loggerSet input@TransportInput{level} =
-        let value = convertTransportInputToEncoding input
-            json = A.encodingToLazyByteString value
-         in pushLogStrLn loggerSet (toLogStr $ coloringLogInfoStr level json)
+    push loggerSet input =
+        let json = convertTransportInputToFormattedMessageANSI input
+         in pushLogStrLn loggerSet (toLogStr json)
