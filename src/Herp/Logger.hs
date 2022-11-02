@@ -240,31 +240,31 @@ logM msg = do
     logIO logger msg
 {-# INLINE logM #-}
 
-logOtherM :: (MonadReader r m, HasLogger r, MonadIO m) => LogLevel -> Payload -> m ()
+logOtherM :: forall r m. (MonadReader r m, HasLogger r, MonadIO m) => LogLevel -> Payload -> m ()
 logOtherM logLevel payload = logM $ P.level logLevel <> payload
 
-logDebugM :: (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
+logDebugM :: forall r m. (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
 logDebugM = logOtherM Debug
 
-logInfoM :: (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
+logInfoM :: forall r m. (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
 logInfoM = logOtherM Informational
 
-logNoticeM :: (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
+logNoticeM :: forall r m. (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
 logNoticeM = logOtherM Notice
 
-logWarnM :: (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
+logWarnM :: forall r m. (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
 logWarnM = logOtherM Warning
 
-logErrorM :: (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
+logErrorM :: forall r m. (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
 logErrorM = logOtherM Error
 
-logCritM :: (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
+logCritM :: forall r m. (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
 logCritM = logOtherM Critical
 
-logAlertM :: (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
+logAlertM :: forall r m. (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
 logAlertM = logOtherM Alert
 
-logEmergM :: (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
+logEmergM :: forall r m. (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
 logEmergM = logOtherM Emergency
 
 flush :: forall r m. (MonadReader r m, HasLogger r, MonadIO m) => m ()
