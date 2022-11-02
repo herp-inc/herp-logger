@@ -80,6 +80,7 @@ library
     , monad-logger
     , mtl
     , raven-haskell ==0.1.4.*
+    , pretty-simple
     , resource-pool ^>= 0.3
     , safe-exceptions
     , stm
