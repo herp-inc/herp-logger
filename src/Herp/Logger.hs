@@ -10,6 +10,7 @@ module Herp.Logger
     , LogLevel(..)
     , LoggerConfig(..)
     , newLogger
+    , withLogger
     , defaultLoggerConfig
     , logM
     , logOtherM
@@ -142,6 +143,9 @@ defaultLoggerConfig =
         , concurrencyLevel = 1
         , logLevel = Debug
         }
+
+withLogger :: LoggerConfig -> (Logger -> IO a) -> IO a
+withLogger config = E.bracket (newLogger config) loggerCleanup
 
 newLogger :: LoggerConfig -> IO Logger
 newLogger LoggerConfig{..} = do
