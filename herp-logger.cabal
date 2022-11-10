@@ -1,4 +1,4 @@
-cabal-version: 3.0
+cabal-version: 3.8
 
 -- This file has been generated from package.yaml by hpack version 0.34.5.
 --
@@ -90,9 +90,7 @@ library
     , unordered-containers
   default-language: Haskell2010
 
-test-suite stdout
-  type: exitcode-stdio-1.0
-  main-is: stdout.hs
+common test
   hs-source-dirs:
       tests
   build-depends:
@@ -101,3 +99,12 @@ test-suite stdout
     , fast-logger
     , mtl
   default-language: Haskell2010
+
+test-suite stdout
+  import: test
+  main-is: stdout.hs
+
+test-suite abort
+  import: test
+  main-is: abort.hs
+  
