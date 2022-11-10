@@ -69,32 +69,30 @@ import "base" GHC.Generics
 import "safe-exceptions" Control.Exception.Safe qualified as E
 
 
-newtype ThreadPool = ThreadPool (Pool (TChan (IO ()), Async ()))
+type ThreadPool = Pool (TQueue (IO ()), Async ())
 
 type ConcurrencyLevel = Int
 
 mkThreadPool :: ConcurrencyLevel -> (E.SomeException -> IO ()) -> IO ThreadPool
 mkThreadPool poolMaxResources errHandler = do
     let createResource = do
-            chan <- newTChanIO
+            queue <- newTQueueIO
             thread <- async . forever $ do
-                task <- atomically $ readTChan chan -- NOTE: Blocks when chan is empty
-                E.catch task
-                        -- NOTE: Catch ALL synchronous exceptions
-                        -- to avoid thread is killed
-                        (\ (e :: E.SomeException) -> errHandler e)
-            pure (chan, thread)
-    let freeResource (_chan, thread) = cancel thread
+                E.bracketOnError
+                    (atomically $ readTQueue queue)
+                    (atomically . unGetTQueue queue)
+                    id `E.catch` (\(e :: E.SomeException) -> errHandler e)
+            pure (queue, thread)
+    let freeResource (queue, thread) = do
+            atomically (flushTQueue queue) >>= sequence_
+            cancel thread
     let poolCacheTTL = 3600
     pool <- newPool PoolConfig{..}
-    pure $ ThreadPool pool
+    pure pool
 
 -- NOTE: It *blocks* when there are no threads in idle.
 runTask :: ThreadPool -> IO () -> IO ()
-runTask (ThreadPool thPool) param = withResource thPool $ \ (ch, _th) -> atomically (writeTChan ch param)
-
-killAllThreads :: ThreadPool -> IO ()
-killAllThreads (ThreadPool thPool) = destroyAllResources thPool
+runTask thPool param = withResource thPool $ \ (ch, _th) -> atomically (writeTQueue ch param)
 
 -- $setup
 -- >>> import Data.Time (getCurrentTime)
@@ -162,7 +160,6 @@ newLogger LoggerConfig{..} = do
         -- まだ書き込まれていないログを本スレッドで処理する
         let drain _ = atomically (flushTQueue queue) >>= mapM_ runTransport
 
-        -- FIXME: Multi transports writing to the same file occurs duplicated characters like "mmeessssaaggee"
         tid <- flip forkFinally drain . forever
             $ E.bracketOnError
                 (atomically $ readTQueue queue)
@@ -174,11 +171,15 @@ newLogger LoggerConfig{..} = do
                 when (transportThreshold <= messageLevel) $ writeTQueue queue input
         pure (tid, thPool, write)
 
-    let loggerCleanup = forM_ tids $ \(tid, thPool, _) -> do
-            killThread tid
-            killAllThreads thPool
+    let loggerFlush = do
+            forM_ tids $ \(_, thPool, _) -> destroyAllResources thPool
+            forM_ transports $ liftIO . X.flush
 
-    let loggerFlush = forM_ transports $ liftIO . X.flush
+    let loggerCleanup = do
+            loggerFlush
+            forM_ tids $ \(tid, thPool, _) -> do
+                killThread tid
+                destroyAllResources thPool
 
     let logger =
             Logger
