@@ -88,6 +88,7 @@ mkThreadPool poolMaxResources errHandler = do
             atomically (flushTQueue queue) >>= sequence_
             cancel thread
     let poolCacheTTL = 3600
+    let poolNumStripes = Just 1
     pool <- newPool PoolConfig{..}
     pure pool
 
