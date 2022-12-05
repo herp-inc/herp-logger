@@ -1,0 +1,8 @@
+packages:
+    .
+
+source-repository-package
+    type: git
+    location: https://github.com/MercuryTechnologies/pool.git
+    tag: 1aa551e41e3527ce23f38251567507df5357fdb9
+
