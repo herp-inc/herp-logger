@@ -71,6 +71,7 @@ messageException e = messageShow e
 
 object :: Object -> Payload
 object obj = mempty { payloadObject = obj }
+{-# WARNING object "This might confuse Datadog!" #-}
 
 instance IsString Payload where
   fromString = message . fromString
