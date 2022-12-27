@@ -15,7 +15,6 @@ library
       Herp.Logger
       Herp.Logger.LogLevel
       Herp.Logger.Payload
-      Herp.Logger.Transport.Sentry
       Herp.Logger.Transport.Stdout
       Herp.Logger.Transport.Types
       Herp.Logger.ANSI.Coloring
@@ -79,7 +78,6 @@ library
     , generic-data
     , monad-logger
     , mtl
-    , raven-haskell ==0.1.4.*
     , pretty-simple
     , resource-pool ^>= 0.3
     , safe-exceptions
@@ -87,7 +85,6 @@ library
     , text
     , unix-compat
     , unix-time
-    , unordered-containers
   default-language: Haskell2010
 
 common test
