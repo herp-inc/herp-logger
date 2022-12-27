@@ -30,6 +30,9 @@ module Herp.Logger
     , P.level
     , P.message
     , P.object
+    , P.messageString
+    , P.messageShow
+    , P.messageException
     -- * monad-logger
     , runLoggingT
     , toLoggerIO
