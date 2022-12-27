@@ -66,8 +66,12 @@ messageUtf8Builder :: BB.Builder -> Payload
 messageUtf8Builder = messageUtf8Lazy . BB.toLazyByteString
 
 messageException :: Exception e => e -> Payload
-messageException e = messageShow e
-  <> "exception_type" .= show (typeOf e)
+messageException e = messageString (displayException e)
+  <> "exception_type" .= show exceptionType
+  where
+    exceptionType = case cast e of
+      Just (SomeException e') -> typeOf e'
+      _ -> typeOf e
 
 object :: Object -> Payload
 object obj = mempty { payloadObject = obj }
