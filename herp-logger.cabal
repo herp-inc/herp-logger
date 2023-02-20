@@ -79,7 +79,7 @@ library
     , monad-logger
     , mtl
     , pretty-simple
-    , resource-pool ^>= 0.3
+    , resource-pool ^>= 0.4
     , safe-exceptions
     , stm
     , text
