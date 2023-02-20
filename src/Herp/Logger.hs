@@ -91,8 +91,7 @@ mkThreadPool poolMaxResources errHandler = do
             atomically (flushTQueue queue) >>= sequence_
             cancel thread
     let poolCacheTTL = 3600
-    let poolNumStripes = Just 1
-    pool <- newPool PoolConfig{..}
+    pool <- newPool $ setNumStripes (Just 1) $ defaultPoolConfig createResource freeResource poolCacheTTL poolMaxResources
     pure pool
 
 -- NOTE: It *blocks* when there are no threads in idle.
