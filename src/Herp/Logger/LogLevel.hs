@@ -9,6 +9,7 @@ module Herp.Logger.LogLevel
     ( LogLevel(..)
     , parseLogLevel
     , convertLogLevel
+    , convertLogLevelToML
     , convertLogLevelToStr
     ) where
 
@@ -46,6 +47,16 @@ convertLogLevel = \case
     M.LevelOther (toLower -> "alert") -> Right Alert
     M.LevelOther (toLower -> "emergency") -> Right Emergency
     M.LevelOther level -> Left level
+
+-- | Convert 'LogLevel' to 'M.LogLevel'.
+convertLogLevelToML :: LogLevel -> M.LogLevel
+convertLogLevelToML = \case
+    Debug -> M.LevelDebug
+    Informational -> M.LevelInfo
+    Notice -> M.LevelInfo
+    Warning -> M.LevelWarn
+    Error -> M.LevelError
+    level -> M.LevelOther (convertLogLevelToStr level)
 
 parseLogLevel :: String -> Either String LogLevel
 parseLogLevel = \case
