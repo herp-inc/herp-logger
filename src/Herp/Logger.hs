@@ -61,6 +61,7 @@ import "resource-pool" Data.Pool
 import "text" Data.Text.Encoding qualified as T
 import Data.UnixTime (formatUnixTime, fromEpochTime)
 import System.PosixCompat.Time (epochTime)
+import "vector" Data.Vector (Vector)
 
 import Herp.Logger.Payload           as P
 import Herp.Logger.LogLevel          as X
@@ -105,7 +106,7 @@ runTask thPool param = withResource thPool $ \ (ch, _th) -> atomically (writeTQu
 
 data Logger = Logger
     { loggerThresholdLevel :: LogLevel
-    , transports :: [Transport]
+    , transports :: Vector Transport
     , timeCache :: IO FormattedTime
     , push :: TransportInput -> IO ()
     , loggerCleanup :: IO ()
@@ -130,7 +131,7 @@ urgentLog msgLevel msg extra = do
     BC.putStrLn $ A.encodingToLazyByteString $ A.pairs $ series <> extra
 
 data LoggerConfig = LoggerConfig
-    { createTransports :: IO [Transport]
+    { createTransports :: IO (Vector Transport)
     , concurrencyLevel :: ConcurrencyLevel
     , logLevel :: LogLevel
     }
