@@ -43,7 +43,8 @@ import "base" Data.Semigroup (Max(..))
 
 import "base" Control.Concurrent ( killThread, forkFinally )
 import "async" Control.Concurrent.Async (async, Async, cancel)
-import "base" Control.Monad (forever, forM, forM_, when)
+import "base" Control.Applicative (liftA2)
+import "base" Control.Monad (forever, forM_, when)
 import "base" Control.Monad.IO.Class (MonadIO(liftIO))
 import "stm" Control.Concurrent.STM
 import Control.Monad.Logger qualified as ML
@@ -151,12 +152,17 @@ defaultLoggerConfig =
 withLogger :: LoggerConfig -> (Logger -> IO a) -> IO a
 withLogger config = E.bracket (newLogger config) loggerCleanup
 
+{-# INLINE traverse' #-}
+traverse' :: Applicative f => (a -> f b) -> [a] -> f [b]
+traverse' f = Prelude.foldr cons_f (pure [])
+  where cons_f x ys = liftA2 (:) (f x) ys
+
 newLogger :: LoggerConfig -> IO Logger
 newLogger LoggerConfig{..} = do
     timeCache <- newTimeCache timestampFormat
     transports <- createTransports
     -- Initializing transports
-    tids <- forM transports \Transport {name, runTransport, threshold = transportThreshold} -> do
+    tids <- flip traverse' transports \Transport {name, runTransport, threshold = transportThreshold} -> do
         queue <- newTQueueIO
         thPool <-
             mkThreadPool
