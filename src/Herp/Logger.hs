@@ -43,7 +43,6 @@ import "base" Data.Semigroup (Max(..))
 
 import "base" Control.Concurrent ( killThread, forkFinally )
 import "async" Control.Concurrent.Async (async, Async, cancel)
-import "base" Control.Applicative (liftA2)
 import "base" Control.Monad (forever, forM_, when)
 import "base" Control.Monad.IO.Class (MonadIO(liftIO))
 import "stm" Control.Concurrent.STM
@@ -153,9 +152,12 @@ withLogger :: LoggerConfig -> (Logger -> IO a) -> IO a
 withLogger config = E.bracket (newLogger config) loggerCleanup
 
 {-# INLINE traverse' #-}
-traverse' :: Applicative f => (a -> f b) -> [a] -> f [b]
-traverse' f = Prelude.foldr cons_f (pure [])
-  where cons_f x ys = liftA2 (:) (f x) ys
+traverse' :: Monad f => (a -> f b) -> [a] -> f [b]
+traverse' _ [] = pure []
+traverse' f (x : xs) = do
+  v <- f x
+  vs <- traverse' f xs
+  pure (v : vs)
 
 newLogger :: LoggerConfig -> IO Logger
 newLogger LoggerConfig{..} = do
