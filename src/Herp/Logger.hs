@@ -157,7 +157,8 @@ traverse' _ [] = pure []
 traverse' f (x : xs) = do
   v <- f x
   vs <- traverse' f xs
-  pure (v : vs)
+  let ret = v : vs
+  pure ret
 
 newLogger :: LoggerConfig -> IO Logger
 newLogger LoggerConfig{..} = do
