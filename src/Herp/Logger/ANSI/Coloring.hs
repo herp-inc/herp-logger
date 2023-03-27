@@ -79,7 +79,7 @@ convertTransportInputToFormattedMessageANSI TransportInput{message, date, level,
                 { outputOptionsIndentAmount = 2
                 , outputOptionsColorOptions = Just colorOpt
                 }
-            objStr = T.encodeUtf8 . pStringOpt opt . B.unpack $ enc
+            objStr = T.encodeUtf8 $ pStringOpt opt $ T.unpack $ T.decodeUtf8 enc
         in case enc of
             "{}" -> insertColorBarIndent level msg
             _ -> insertColorBarIndent level $ msg <> "\n" <> insertIndent 2 objStr
