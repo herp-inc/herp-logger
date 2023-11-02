@@ -68,7 +68,7 @@ library
       InstanceSigs
       ImportQualifiedPost
   build-depends:
-      aeson
+      aeson ^>= 2.2
     , ansi-terminal
     , async
     , base >=4.7 && <5

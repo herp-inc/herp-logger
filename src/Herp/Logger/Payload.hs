@@ -14,7 +14,7 @@ module Herp.Logger.Payload
   ) where
 
 import Control.Exception
-import Data.Aeson (Object, KeyValue(..))
+import Data.Aeson (Object, KeyValue(..), Value)
 import Data.ByteString (ByteString)
 import Data.ByteString.Builder qualified as BB
 import Data.ByteString.Lazy qualified as BL
@@ -80,5 +80,6 @@ object obj = mempty { payloadObject = obj }
 instance IsString Payload where
   fromString = message . fromString
 
-instance KeyValue Payload where
+instance KeyValue Value Payload where
   key .= val = mempty { payloadObject = key .= val }
+  explicitToField f k v = mempty { payloadObject = k .= f v }
