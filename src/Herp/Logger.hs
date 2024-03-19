@@ -9,6 +9,7 @@ module Herp.Logger
     , HasLogger(..)
     , LogLevel(..)
     , LoggerConfig(..)
+    , ConcurrencyLevel
     , newLogger
     , withLogger
     , defaultLoggerConfig
@@ -36,6 +37,9 @@ module Herp.Logger
     -- * monad-logger
     , runLoggingT
     , toLoggerIO
+    -- * Hooks
+    , Hooks(..)
+    , defaultHooks
     ) where
 
 import "base" Prelude hiding (log)
@@ -110,6 +114,7 @@ data Logger = Logger
     , push :: TransportInput -> IO ()
     , loggerCleanup :: IO ()
     , loggerFlush :: IO ()
+    , loggerHooks :: Hooks
     }
     deriving stock Generic
 
@@ -133,6 +138,7 @@ data LoggerConfig = LoggerConfig
     { createTransports :: IO (Vector Transport)
     , concurrencyLevel :: ConcurrencyLevel
     , logLevel :: LogLevel
+    , hooks :: Hooks
     }
 
 defaultLoggerConfig :: LoggerConfig
@@ -146,7 +152,17 @@ defaultLoggerConfig =
                 else pure [stdoutTransport ls Debug]
         , concurrencyLevel = 1
         , logLevel = Debug
+        , hooks = defaultHooks
         }
+
+-- 将来別のフックを追加したくなるかもしれないので Hooks でくるんでいる
+data Hooks =
+    Hooks
+        { logHook :: (Logger -> Payload -> IO ()) -> Logger -> Payload -> IO ()
+        }
+
+defaultHooks :: Hooks
+defaultHooks = Hooks id
 
 withLogger :: LoggerConfig -> (Logger -> IO a) -> IO a
 withLogger config = E.bracket (newLogger config) loggerCleanup
@@ -197,6 +213,7 @@ newLogger LoggerConfig{..} = do
                 , push = \input -> forM_ tids $ \(_, _, write) -> atomically $ write input
                 , loggerCleanup
                 , loggerFlush
+                , loggerHooks = hooks
                 }
 
     let transportToValue tr = A.object ["name" .= name tr, "transport_level" .= threshold tr]
@@ -240,7 +257,7 @@ instance HasLogger Logger where
 logIO :: MonadIO m => Logger -> Payload -> m ()
 logIO logger@Logger {timeCache} msg = do
     date <- liftIO timeCache
-    liftIO $ log' logger date msg
+    liftIO $ logHook (loggerHooks logger) (flip log' date) logger msg
 {-# INLINE logIO #-}
 
 logM :: forall r m. (MonadReader r m, HasLogger r, MonadIO m) => Payload -> m ()
