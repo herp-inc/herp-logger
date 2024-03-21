@@ -107,3 +107,8 @@ test-suite abort
   import: test
   type: exitcode-stdio-1.0
   main-is: abort.hs
+
+test-suite hook
+  import: test
+  type: exitcode-stdio-1.0
+  main-is: hook.hs
