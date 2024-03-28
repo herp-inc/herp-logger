@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE UndecidableInstances #-}
 module Herp.Logger.Payload
@@ -14,7 +15,7 @@ module Herp.Logger.Payload
   ) where
 
 import Control.Exception
-import Data.Aeson (Object, KeyValue(..), Value)
+import Data.Aeson (Object, KeyValue(..))
 import Data.ByteString (ByteString)
 import Data.ByteString.Builder qualified as BB
 import Data.ByteString.Lazy qualified as BL
@@ -27,6 +28,10 @@ import Generic.Data
 import GHC.Exts
 import GHC.OverloadedLabels
 import Herp.Logger.LogLevel
+
+#if MIN_VERSION_aeson(2,2,0)
+import Data.Aeson (Value)
+#endif
 
 data Payload = Payload
   { payloadLevel :: Max LogLevel
@@ -80,6 +85,11 @@ object obj = mempty { payloadObject = obj }
 instance IsString Payload where
   fromString = message . fromString
 
+#if MIN_VERSION_aeson(2,2,0)
 instance KeyValue Value Payload where
   key .= val = mempty { payloadObject = key .= val }
   explicitToField f k v = mempty { payloadObject = k .= f v }
+#else
+instance KeyValue Payload where
+  key .= val = mempty { payloadObject = key .= val }
+#endif
